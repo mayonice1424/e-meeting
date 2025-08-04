@@ -1,33 +1,31 @@
-version: '3'
+version: "3"
 services:
-  app:
-    build: .
-    container_name: go-app
-    ports:
-      - "8080:8080"
-    depends_on:
-      - db
-    environment:
-      DB_USER: postgres
-      DB_PASSWORD: polkmn1234
-      DB_NAME: postgres
-      DB_HOST: db
-    networks:
-      - go-net
-
-  db:
+  database:
     image: postgres:16
-    container_name: postgres-db
     environment:
-      POSTGRES_USER: admin
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: polkmn1234
       POSTGRES_DB: postgres
+      DB_HOST: localhost
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
       - go-net
     ports:
       - "5431:5432"
+  e-meeting:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app
+    restart: unless-stopped
+    command: go run main.go
+    ports:
+      - "8080:800"
+    depends_on:
+      - database
+    networks:
+      - go-net
 
 networks:
   go-net:
