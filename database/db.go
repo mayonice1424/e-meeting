@@ -4,31 +4,20 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
 
 	_ "github.com/lib/pq"
 )
 
-var DB *sql.DB
-
-// Connect to PostgreSQL database
-func Connect() {
-	var err error
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:5432/%s?sslmode=disable",
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_NAME"),
-	)
-
-	DB, err = sql.Open("postgres", connStr)
+func ConnectToDatabase() *sql.DB {
+	connStr := "user=admin dbname=postgres password=polkmn1234 host=localhost port=5431 sslmode=disable"
+	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		log.Fatal("Unable to connect to database:", err)
+		log.Fatal("Database Connection Failed: ", err)
 	}
-
-	// Verify connection
-	err = DB.Ping()
+	err = db.Ping()
 	if err != nil {
-		log.Fatal("Failed to ping database:", err)
+		log.Fatal("Failed to ping the database: ", err)
 	}
+	fmt.Println("Database Connected Successfully")
+	return db
 }
