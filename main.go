@@ -3,7 +3,6 @@ package main
 import (
 	"emeeting/database"
 	"fmt"
-
 	"github.com/labstack/echo/v4"
 )
 
