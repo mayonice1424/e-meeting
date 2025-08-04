@@ -11,7 +11,9 @@ import (
 func main() {
 	e := echo.New()
 	db := database.ConnectToDatabase()
-	defer db.Close() 
+	defer db.Close()
+
+	// e.GET("/generate-token", auth.GenerateTokenJWT)
 
 	err := database.CreatedUser(db)
 	if err != nil {
