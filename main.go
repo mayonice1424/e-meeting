@@ -17,7 +17,7 @@ func main() {
 	db := configDb.ConnectToDatabase()
 	defer db.Close() 
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
-	 routes.RegisterRoutes(e)
+	routes.RegisterRoutes(e)
 	err := createtable.CreatedUser(db)
 	if err != nil {
 		log.Fatal("Error creating table: ", err)
@@ -40,5 +40,4 @@ func main() {
 	}
 	fmt.Println("Echo server is running..")
 	e.Logger.Fatal(e.Start(":8080"))
-
 }

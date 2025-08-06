@@ -1,17 +1,29 @@
 package models
 
 type User struct {
-	ID              int    `json:"id"`
-	Name            string `json:"name"`
-	Email           string `json:"email"`
-	Username        string `json:"username"`
-	Password        string `json:"password"`
-	No_HP           string `json:"no_hp"`
-	Role            string `json:"role"`
-	Status          string `json:"status"`
-	Language        string `json:"language"`
-	Profile_Picture string `json:"profile_picture"`
+	ID               int    `json:"id"`
+	Name             string `json:"name"`
+	Email            string `json:"email"`
+	Username         string `json:"username"`
+	Password         string `json:"password"`
+	No_HP            string `json:"no_hp"`
+	Role             string `json:"role"`
+	Status           string `json:"status"`
+	Language         string `json:"language"`
+	Profile_Picture  string `json:"profile_picture"`
+}
+
+type CreateUser struct {
+	ID               int    `json:"id"`
+	Email            string `json:"email"`
+	Username         string `json:"username"`
+	Password         string `json:"password"`
 	Confirm_Password string `json:"confirm_password"`
+}
+
+type LoginUser struct {
+	Username         string `json:"username"`
+	Password         string `json:"password"`
 }
 type ErrorResponse struct {
 	Message string `json:"message"`
@@ -21,10 +33,15 @@ type UserId struct {
 	Message map[string]interface{} `json:"message,omitempty"`
 }
 type SuccessResponse struct {
-	Data    Token                 `json:"data"`
+	Data    User   `json:"data"`
 	Message string `json:"message"`
+}
 
+type SuccessResponseLogin struct {
+	Data    Token   `json:"data"`
+	Message string `json:"message"`
 }
 type Token struct {
-	Token string `json:"token"`
+	Access_Token  string `json:"accessToken"`
+	Refresh_Token string `json:"refreshToken"`
 }

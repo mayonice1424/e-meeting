@@ -1,10 +1,37 @@
 definitions:
+  models.CreateUser:
+    properties:
+      confirm_password:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      password:
+        type: string
+      username:
+        type: string
+    type: object
   models.ErrorResponse:
     properties:
       message:
         type: string
     type: object
+  models.LoginUser:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
   models.SuccessResponse:
+    properties:
+      data:
+        $ref: '#/definitions/models.User'
+      message:
+        type: string
+    type: object
+  models.SuccessResponseLogin:
     properties:
       data:
         $ref: '#/definitions/models.Token'
@@ -13,13 +40,13 @@ definitions:
     type: object
   models.Token:
     properties:
-      token:
+      accessToken:
+        type: string
+      refreshToken:
         type: string
     type: object
   models.User:
     properties:
-      confirm_password:
-        type: string
       email:
         type: string
       id:
@@ -44,6 +71,36 @@ definitions:
 info:
   contact: {}
 paths:
+  /users/login:
+    post:
+      consumes:
+      - application/json
+      description: Login user with username and password
+      parameters:
+      - description: User login object
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.LoginUser'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SuccessResponseLogin'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Endpoint for user login
+      tags:
+      - users
   /users/register:
     post:
       consumes:
@@ -54,7 +111,7 @@ paths:
         name: user
         required: true
         schema:
-          $ref: '#/definitions/models.User'
+          $ref: '#/definitions/models.CreateUser'
       produces:
       - application/json
       responses:
