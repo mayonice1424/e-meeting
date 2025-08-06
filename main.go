@@ -13,7 +13,7 @@ func main() {
 	db := database.ConnectToDatabase()
 	defer db.Close()
 
-	// e.GET("/generate-token", auth.GenerateTokenJWT)
+	e.GET("/generate-token", auth.GenerateTokenJWT)
 
 	err := database.CreatedUser(db)
 	if err != nil {
