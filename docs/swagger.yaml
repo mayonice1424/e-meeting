@@ -1,0 +1,72 @@
+definitions:
+  models.ErrorResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  models.SuccessResponse:
+    properties:
+      data:
+        $ref: '#/definitions/models.Token'
+      message:
+        type: string
+    type: object
+  models.Token:
+    properties:
+      token:
+        type: string
+    type: object
+  models.User:
+    properties:
+      confirm_password:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      language:
+        type: string
+      name:
+        type: string
+      no_hp:
+        type: string
+      password:
+        type: string
+      profile_picture:
+        type: string
+      role:
+        type: string
+      status:
+        type: string
+      username:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /users/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User object
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Endpoint create a new user
+      tags:
+      - users
+swagger: "2.0"
