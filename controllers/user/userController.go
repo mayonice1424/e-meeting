@@ -50,6 +50,8 @@ func UserRegister(c echo.Context) error {
 
 	var newUser models.CreateUser
 	var responseUser models.User
+	var data *int
+	data = nil
 	err := c.Bind(&newUser)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid request payload"})
@@ -65,21 +67,26 @@ func UserRegister(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error hashing password"})
 	}
+	
 	err = db.QueryRow(`
 		INSERT INTO users (email, password, username) 
 		VALUES ($1, $2, $3) 
 		RETURNING id`, 
 		newUser.Email, 
 		hashedPassword, 
-		newUser.Username).Scan(&newUser.ID)
+		newUser.Username).Scan(&responseUser.ID)
 	if err != nil {
 		log.Println("Error inserting user:", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error creating user"})
 	}
-
-	
+	// query:= "select id, name, email, username, no_hp, role, status, language, profile_picture, created_at, updated_at  from users where id = $1"
+	// err = db.QueryRow(query,responseUser.ID).Scan( &responseUser.ID, &responseUser.Name, &responseUser.Email, &responseUser.Username, &responseUser.No_HP, &responseUser.Role, &responseUser.Status, &responseUser.Language, &responseUser.Profile_Picture, &responseUser.Created_At, &responseUser.Updated_At  )
+	// 	if err != nil {
+	// 	log.Println("Error fetching user details:", err)
+	// 	return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error retrieving user details"})
+	// }
 	return c.JSON(http.StatusOK, models.SuccessResponse{
-		Data:    responseUser,
+		Data:    data,
 		Message: "User created successfully",
 	})
 }
@@ -131,7 +138,9 @@ accessClaimsMap := jwt.MapClaims{
 	}
 
 	refreshClaims := jwt.MapClaims{
+		"email":    email,       
 		"username": loginUser.Username,
+		"userId":   userId,
 		"exp":      time.Now().Add(30 * 24 * time.Hour).Unix(), 
 	}
 

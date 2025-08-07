@@ -5,8 +5,6 @@ definitions:
         type: string
       email:
         type: string
-      id:
-        type: integer
       password:
         type: string
       username:
@@ -27,7 +25,7 @@ definitions:
   models.SuccessResponse:
     properties:
       data:
-        $ref: '#/definitions/models.User'
+        type: integer
       message:
         type: string
     type: object
@@ -43,29 +41,6 @@ definitions:
       accessToken:
         type: string
       refreshToken:
-        type: string
-    type: object
-  models.User:
-    properties:
-      email:
-        type: string
-      id:
-        type: integer
-      language:
-        type: string
-      name:
-        type: string
-      no_hp:
-        type: string
-      password:
-        type: string
-      profile_picture:
-        type: string
-      role:
-        type: string
-      status:
-        type: string
-      username:
         type: string
     type: object
 info:

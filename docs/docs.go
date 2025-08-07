@@ -111,9 +111,6 @@ const docTemplate = `{
                 "email": {
                     "type": "string"
                 },
-                "id": {
-                    "type": "integer"
-                },
                 "password": {
                     "type": "string"
                 },
@@ -145,7 +142,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/models.User"
+                    "type": "integer"
                 },
                 "message": {
                     "type": "string"
@@ -170,41 +167,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "refreshToken": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.User": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "language": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "no_hp": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "profile_picture": {
-                    "type": "string"
-                },
-                "role": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "username": {
                     "type": "string"
                 }
             }
