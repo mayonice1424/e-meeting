@@ -1,37 +1,42 @@
 package main
 
 import (
+	"emeeting/config"
 	"emeeting/database"
+	"emeeting/routes/user"
 	"fmt"
 	"log"
 
+	_ "emeeting/docs"
+
 	"github.com/labstack/echo/v4"
+	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
 func main() {
 	e := echo.New()
-	db := database.ConnectToDatabase()
+	db := configDb.ConnectToDatabase()
 	defer db.Close()
-
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
 	e.GET("/generate-token", auth.GenerateTokenJWT)
-
-	err := database.CreatedUser(db)
+	routes.RegisterRoutes(e)
+	err := createtable.CreatedUser(db)
 	if err != nil {
 		log.Fatal("Error creating table: ", err)
 	}
-	err = database.CreateDataPersonalReservation(db)
+	err = createtable.CreateDataPersonalReservation(db)
 	if err != nil {
 		log.Fatal("Error creating 'data_personal_reservation' table: ", err)
 	}
-	err = database.CreateDataRoom(db)
+	err = createtable.CreateDataRoom(db)
 	if err != nil {
 		log.Fatal("Error creating 'room' table: ", err)
 	}
-	err = database.CreateDataSnack(db)
+	err = createtable.CreateDataSnack(db)
 	if err != nil {
 		log.Fatal("Error creating 'snack' table: ", err)
 	}
-	err = database.CreateDataBookingRoom(db)
+	err = createtable.CreateDataBookingRoom(db)
 	if err != nil {
 		log.Fatal("Error creating 'booking' table: ", err)
 	}

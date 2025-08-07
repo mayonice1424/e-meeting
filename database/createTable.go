@@ -1,44 +1,29 @@
-package database
+package createtable
 
 import (
 	"database/sql"
 	"fmt"
-	"log"
-
 	_ "github.com/lib/pq"
 )
 
-func ConnectToDatabase() *sql.DB {
-	// Ganti localhost dengan db, nama service dari Docker Compose
-	connStr := "user=postgres dbname=postgres password=polkmn1234 host=localhost port=5431 sslmode=disable"  // Menggunakan port 5432 di container
-	db, err := sql.Open("postgres", connStr)
-	if err != nil {
-		log.Fatal("Database Connection Failed: ", err)
-	}
-	err = db.Ping()
-	if err != nil {
-		log.Fatal("Failed to ping the database: ", err)
-	}
-	fmt.Println("Database Connected Successfully")
-	return db
-}
+
 
 
 func CreatedUser(db *sql.DB) error {
 	query := `
-	CREATE TABLE IF NOT EXISTS users (
+  CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY NOT NULL,
-    name VARCHAR(100) NOT NULL,
+    name VARCHAR(100) DEFAULT '',  -- Kolom ini boleh NULL dan diberi string kosong default
     email VARCHAR(100) UNIQUE NOT NULL,
     username VARCHAR(100) NOT NULL,
     password VARCHAR(100) NOT NULL,
-    no_hp VARCHAR(20) NOT NULL,
-    role VARCHAR(20) NOT NULL,
-    status BOOLEAN DEFAULT false,
-    language VARCHAR(50) NOT NULL,
-    profile_picture VARCHAR(100) NOT NULL,
+    no_hp VARCHAR(20) DEFAULT '',  -- Kolom ini boleh NULL dan diberi string kosong default
+    role VARCHAR(20) DEFAULT '',  -- Kolom ini boleh NULL dan diberi string kosong default
+    status VARCHAR(20) DEFAULT 'In-Active',
+    language VARCHAR(50) DEFAULT '',
+    profile_picture VARCHAR(100) DEFAULT '',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP 
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 	`
 	_, err := db.Exec(query)
@@ -135,6 +120,6 @@ func CreateDataBookingRoom(db *sql.DB) error {
 	if err != nil {
 		return fmt.Errorf("failed to create table: %v", err)
 	}
-	fmt.Println("Table 'booking room' created successfully!")
+	fmt.Println("Table 'booking_room' created successfully!")
 	return nil
 }
