@@ -11,7 +11,8 @@ import (
 var SecretKey = []byte("my_secret_key")
 
 func GenerateTokenJWT(c echo.Context) error {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{ 
+		"role" : ""
 		"username": "maulanaazis",
 		"email":    "azis17@gmail.com",
 		"exp":      time.Now().Add(time.Hour * 24).Unix(),
