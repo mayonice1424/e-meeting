@@ -1,6 +1,6 @@
 package models
 
-
+import "time"
 type User struct {
 	ID               int    `json:"id"`
 	Name             string `json:"name"`
@@ -14,14 +14,12 @@ type User struct {
 	Created_At       string `json:"created_at"`
 	Updated_At       string `json:"updated_at"`
 }
-
 type CreateUser struct {
 	Email            string `json:"email"`
 	Username         string `json:"username"`
 	Password         string `json:"password"`
 	Confirm_Password string `json:"confirm_password"`
 }
-
 type LoginUser struct {
 	Username         string `json:"username"`
 	Password         string `json:"password"`
@@ -31,26 +29,47 @@ type ErrorResponse struct {
 }
 type UserId struct {
 	Data    []User                 `json:"data"`
-	Message map[string]interface{} `json:"message,omitempty"`
+	Message map[string] interface{} `json:"message,omitempty"`
 }
 type SuccessResponse struct {
 	Data    *int   `json:"data"`
 	Message string `json:"message"`
 }
-
+type SuccessResponseUser struct {
+	Data    []User `json:"data"`
+	Message string `json:"message"`
+}
 type SuccessResponseLogin struct {
 	Data    Token   `json:"data"`
 	Message string `json:"message"`
+}
+type SuccessResponseResetPassword struct {
+	Data    TokenResetPassword   `json:"data"`
 }
 type Token struct {
 	Access_Token  string `json:"accessToken"`
 	Refresh_Token string `json:"refreshToken"`
 }
+type TokenResetPassword struct {
+	Token  string `json:"token"`
+}
+type ResetPasswordById struct  {
+	NewPassword string  `json:"new_password"`
+	ConfirmPassword string `json:"confirm_password"`
+}
+type UserReset struct {
+	ID        int    `json:"id"`
+	Email     string `json:"email"`
+	Password  string `json:"password"`
+}
+type PasswordReset struct {
+	ID        int       `json:"id"`
+	UserID    int       `json:"user_id"`
+	Token     string    `json:"token"`
+	ExpiresAt time.Time `json:"expires_at"`
+	CreatedAt time.Time `json:"created_at"`
+}
+type EmailResetPassword struct {
+	Email string `json:"email"`
+}
 
-// type PasswordReset struct {
-// 	ID        int       `json:"id"`
-// 	UserID    int       `json:"user_id"`
-// 	Token     string    `json:"token"`
-// 	ExpiresAt time.Time `json:"expires_at"`
-// 	CreatedAt time.Time `json:"created_at"`
-// }

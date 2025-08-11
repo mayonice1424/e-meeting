@@ -3,6 +3,7 @@ package main
 import (
 	"emeeting/config"
 	"emeeting/database"
+	"emeeting/middleware"
 	"emeeting/routes/user"
 	"fmt"
 	"log"
@@ -17,8 +18,20 @@ func main() {
 	db := configDb.ConnectToDatabase()
 	defer db.Close() 
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
+	e.GET("/validate-token", func(c echo.Context) error {
+		claims, err := auth.ValidateTokenJWT(c)
+		if err != nil {
+			return c.JSON(401, map[string]string{"error": err.Error()})
+		}
+		return c.JSON(200, claims)
+	})
+	e.GET("/validate-refresh-token", auth.ValidateRefreshToken)
 	routes.RegisterRoutes(e)
 	err := createtable.CreatedUser(db)
+	if err != nil {
+		log.Fatal("Error creating table: ", err)
+	}
+	err = createtable.CreateResetPassword(db)
 	if err != nil {
 		log.Fatal("Error creating table: ", err)
 	}
