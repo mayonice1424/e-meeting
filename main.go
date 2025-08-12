@@ -1,9 +1,10 @@
 package main
 
 import (
-	"emeeting/config"
-	"emeeting/database"
-	"emeeting/routes/user"
+	configDb "emeeting/config"
+	createtable "emeeting/database"
+	"emeeting/database/auth"
+	routes "emeeting/routes/user"
 	"fmt"
 	"log"
 

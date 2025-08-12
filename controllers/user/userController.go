@@ -16,6 +16,7 @@ import (
 )
 
 var jwtKey = []byte(os.Getenv("SECRET_KEY"))
+
 func PasswordValidation(password string) bool {
 	lowercaseRegex := `[a-z]`
 	uppercaseRegex := `[A-Z]`
@@ -35,9 +36,10 @@ func PasswordValidation(password string) bool {
 		specialCharRe.MatchString(password) &&
 		minLengthRe.MatchString(password)
 }
+
 // @Summary Endpoint create a new user
 // @Descrition Create a new user with username, email, password
-// @Tags users 
+// @Tags users
 // @Accept json
 // @Produce json
 // @Param user body models.CreateUser true "User object"
@@ -68,22 +70,20 @@ func UserRegister(c echo.Context) error {
 	err = db.QueryRow(`
 		INSERT INTO users (email, password, username) 
 		VALUES ($1, $2, $3) 
-		RETURNING id`, 
-		newUser.Email, 
-		hashedPassword, 
+		RETURNING id`,
+		newUser.Email,
+		hashedPassword,
 		newUser.Username).Scan(&newUser.ID)
 	if err != nil {
 		log.Println("Error inserting user:", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error creating user"})
 	}
 
-	
 	return c.JSON(http.StatusOK, models.SuccessResponse{
 		Data:    responseUser,
 		Message: "User created successfully",
 	})
 }
-
 
 // UserLogin godoc
 // @Summary Endpoint for user login
@@ -117,8 +117,8 @@ func UserLogin(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Login Failed"})
 	}
-accessClaimsMap := jwt.MapClaims{
-		"email":    email,       
+	accessClaimsMap := jwt.MapClaims{
+		"email":    email,
 		"username": loginUser.Username,
 		"userId":   userId,
 		"exp":      time.Now().Add(24 * time.Hour).Unix(),
@@ -132,7 +132,7 @@ accessClaimsMap := jwt.MapClaims{
 
 	refreshClaims := jwt.MapClaims{
 		"username": loginUser.Username,
-		"exp":      time.Now().Add(30 * 24 * time.Hour).Unix(), 
+		"exp":      time.Now().Add(30 * 24 * time.Hour).Unix(),
 	}
 
 	refreshToken, err := generateJWTToken(refreshClaims)
