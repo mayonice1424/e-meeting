@@ -3,6 +3,7 @@ module emeeting
 go 1.24.4
 
 require (
+	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/PuerkitoBio/purell v1.2.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect

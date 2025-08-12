@@ -4,19 +4,22 @@ import (
 	"emeeting/config"
 	"emeeting/database"
 	"emeeting/middleware"
-	"emeeting/routes/user"
+	user "emeeting/routes/user"
+	snack "emeeting/routes/snack"
+
 	"fmt"
 	"log"
 
+	_ "emeeting/docs"
+
 	"github.com/labstack/echo/v4"
 	echoSwagger "github.com/swaggo/echo-swagger"
-	_ "emeeting/docs"
 )
 
 func main() {
 	e := echo.New()
 	db := configDb.ConnectToDatabase()
-	defer db.Close() 
+	defer db.Close()
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 	e.GET("/validate-token", func(c echo.Context) error {
 		claims, err := auth.ValidateTokenJWT(c)
@@ -26,7 +29,8 @@ func main() {
 		return c.JSON(200, claims)
 	})
 	e.GET("/validate-refresh-token", auth.ValidateRefreshToken)
-	routes.RegisterRoutes(e)
+	user.RegisterRoutes(e)
+	snack.SnackRoutes(e)
 	err := createtable.CreatedUser(db)
 	if err != nil {
 		log.Fatal("Error creating table: ", err)

@@ -51,9 +51,10 @@ func PasswordValidation(password string) bool {
 		specialCharRe.MatchString(password) &&
 		minLengthRe.MatchString(password)
 }
+
 // @Summary Endpoint create a new user
 // @Descrition Create a new user with username, email, password
-// @Tags users 
+// @Tags users
 // @Accept json
 // @Produce json
 // @Param user body models.CreateUser true "User object"
@@ -107,7 +108,6 @@ func UserRegister(c echo.Context) error {
 	})
 }
 
-
 // UserLogin godoc
 // @Summary Endpoint for user login
 // @Description Login user with username and password
@@ -141,8 +141,8 @@ func UserLogin(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Login Failed"})
 	}
-accessClaimsMap := jwt.MapClaims{
-		"email":    email,       
+	accessClaimsMap := jwt.MapClaims{
+		"email":    email,
 		"username": loginUser.Username,
 		"userId":   userId,
 		"role" : role,
