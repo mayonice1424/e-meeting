@@ -1,125 +1,52 @@
-package snackcontroller
+package snackController
 
 import (
-	"emeeting/models/"
+	configDb "emeeting/config"
+	"emeeting/models"
+	"fmt"
 	"net/http"
-
 	"github.com/labstack/echo/v4"
-	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
-type Snack struct {
-	ID    int    `json:"id"`
-	Name  string `json:"name"`
-	Price int    `json:"Price"`
-}
-
-type ErrorResponse struct {
-	Message string `json:"message"`
-}
-
-var snacks = []models.Snack{
-	{ID: 1, Name: "Chips", Price: 10000},
-	{ID: 2, Name: "Cookies", Price: 15000},
-}
-
-func main() {
-	e := echo.New()
-
-	e.GET("/swagger/*", echoSwagger.WrapHandler)
-	e.GET("/snacks", GetSnacks)
-	// e.GET("/snacks/:id", GetSnackByID)
-	// e.POST("/snacks", createSnack)
-	// e.PUT("/snacks/:id", UpdateSnack)
-	// e.DELETE("/snacks/:id", DeleteSnack)
-
-	e.Start(":8080")
-}
-
-// Get all snacks
+// GetSnacks godoc
+// @Summary Endpoint for snack by id
+// @Description Snack
+// @Tags snacks
+// @Accept json
+// @Produce json
+// @Success 200 {object} models.SuccessResponseSnack
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /snack [get]
 func GetSnacks(c echo.Context) error {
-	if len(snacks) == 0 {
-		return c.JSON(http.StatusNotFound, ErrorResponse{Message: "No snacks found"})
+	fmt.Println("Claims: test0")
+	db:= configDb.ConnectToDatabase()
+	defer db.Close()
+	var snacks []models.Snack
+	query := "SELECT id, name, price, unit, category FROM snack_category"
+	rows, err := db.Query(query)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "failed to retrieve snacks: " + err.Error()})
 	}
-	return c.JSON(http.StatusOK, snacks)
+
+	defer rows.Close()
+	fmt.Println("Claims: test5", rows)
+
+	for rows.Next() {
+		var snack models.Snack
+		if err := rows.Scan(&snack.ID, &snack.Name, &snack.Price, &snack.Unit, &snack.Category); err != nil {
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "failed to scan snack: " + err.Error()})
+		}
+		snacks = append(snacks, snack)
+	}
+
+	if err := rows.Err(); err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "error iterating over snacks: " + err.Error()})
+	}
+	if len(snacks) == 0 {
+		return c.JSON(http.StatusNotFound, models.ErrorResponse{Message: "no snacks found"})
+	}
+	return c.JSON(http.StatusOK, models.SuccessResponseSnack{Data: snacks, Message: "snacks retrieved successfully"})
 }
 
-// Get snack by ID
-// func getSnackByID(c echo.Context) error {
-// 	id := c.Param("id")
-// 	IDInt, err := strconv.Atoi(id)
-// 	if err != nil {
-// 		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid snack ID"})
-// 	}
-// }
-
-// 	for _, snack := range snacks {
-// 		if snack.ID == id {
-// 			c.JSON(http.StatusOK, snack)
-// 			return
-// 	}
-
-// 	return c.JSON(http.StatusNotFound, ErrorResponse{Message: "Snack not found"})
-// }
-// // Create a new snack
-// func createSnack(c echo.Context) error {
-// 	var newSnack Snack
-// 	err := c.Bind(&newSnack)
-// 	if err != nil {
-// 		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid request payload"})
-// 	}
-
-// 	if newSnack.Name == "" {
-// 		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Name is required"})
-// 	}
-
-// 	snacks = append(snacks, newSnack)
-// 	return c.JSON(http.StatusCreated, newSnack)
-// }
-
-// // Update a snack
-// func UpdateSnack(c echo.Context) error {
-// 	id := c.Param("id")            // ambil parameter id yang akan diupdate
-// 	IDInt, err := strconv.Atoi(id) // konversi string ke integer
-// 	if err != nil {
-// 		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid snack ID"})
-// 	}
-
-// 	var updatedSnack Snack       // buat variabel untuk menyimpan data snack yang akan diupdate
-// 	err = c.Bind(&updatedSnack) // bind data dari request body ke variabel updatedSnack
-// 	if err != nil {
-// 		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid request payload"})
-// 	}
-
-// 	// cari user dengan ID yang sesuai
-// 	for i, snack := range snacks {
-// 		if user.ID == IDInt {
-// 			snacks[i] = updatedUser // update data snack
-// 			return c.JSON(http.StatusOK, updatedSnack)
-// 		}
-// 	}
-// 	return c.JSON(http.StatusNotFound, ErrorResponse{Message: "Snack not found"})
-// }
-
-// // Delete a snack
-// func DeleteSnack(c echo.Context) error {
-// 	id := c.Param("id")            // ambil parameter id yang akan dihapus
-// 	IDInt, err := strconv.Atoi(id) // konversi string ke integer
-// 	if err != nil {
-// 		return c.JSON(http.StatusBadRequest, ErrorResponse{Message: "Invalid snack ID"})
-// 	}
-
-// 	// cari snack dengan ID yang sesuai
-// 	// jika ditemukan, hapus snack tersebut dari slice snacks
-// 	for i, snack := range snacks {
-// 		if snack.ID == IDInt {
-// 			snacks = append(snacks[:i], snacks[i+1:]...) // hapus snack dari slice
-// 			// menghapus snack dengan cara menggabungkan slice sebelum dan sesudah index yang dihapus
-// 			// sehingga snack dengan ID tersebut tidak ada lagi di slice snacks
-// 			// mengembalikan status 204 No Content sebagai respons
-// 			// karena tidak ada konten yang dikembalikan setelah penghapusan
-// 			return c.NoContent(http.StatusNoContent)
-// 		}
-// 	}
-// 	return c.JSON(http.StatusNotFound, ErrorResponse{Message: "Snack not found"})
-// }

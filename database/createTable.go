@@ -101,7 +101,8 @@ func CreateDataSnack(db *sql.DB) error {
 		CREATE TABLE IF NOT EXISTS snack_category (
     id SERIAL PRIMARY KEY NOT NULL,
     name VARCHAR(100) NOT NULL,
-    satuan VARCHAR(100) NOT NULL,
+    unit VARCHAR(100) NOT NULL,
+    category VARCHAR(100) NOT NULL,
     price INT NOT NULL
 		)
 		`

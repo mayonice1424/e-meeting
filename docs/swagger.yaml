@@ -34,6 +34,19 @@ definitions:
       new_password:
         type: string
     type: object
+  models.Snack:
+    properties:
+      category:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      price:
+        type: integer
+      unit:
+        type: string
+    type: object
   models.SuccessResponse:
     properties:
       data:
@@ -52,6 +65,15 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/models.TokenResetPassword'
+    type: object
+  models.SuccessResponseSnack:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.Snack'
+        type: array
+      message:
+        type: string
     type: object
   models.SuccessResponseUser:
     properties:
@@ -210,6 +232,33 @@ paths:
       summary: Endpoint for user reset password
       tags:
       - Reset Password
+  /snack:
+    get:
+      consumes:
+      - application/json
+      description: Snack
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SuccessResponseSnack'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Endpoint for snack by id
+      tags:
+      - snacks
   /users/login:
     post:
       consumes:
