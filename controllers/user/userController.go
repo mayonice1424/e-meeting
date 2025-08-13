@@ -7,9 +7,11 @@ import (
 	"emeeting/utils"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -373,11 +375,29 @@ func UserUpdate(c echo.Context) error {
 		updateValues = append(updateValues, user.Language)
 		paramCount++
 	}
+
 	if user.ImageURL != "" {
+		if strings.Contains(user.ImageURL, "/temp/") {
+			fileName := filepath.Base(user.ImageURL)
+			sourcePath := filepath.Join("./temp", fileName)
+			destPath := filepath.Join("./uploads", fileName)
+			sourcePath = filepath.ToSlash(sourcePath)
+			destPath = filepath.ToSlash(destPath)
+			fmt.Println("Source Path:", sourcePath)
+			fmt.Println("Destination Path:", destPath)
+			err := moveFile(sourcePath, destPath)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Error moving file"})
+			}
+
+			user.ImageURL = fmt.Sprintf("http://localhost:8080/uploads/%s", fileName)
+		}
+
 		updateFields = append(updateFields, fmt.Sprintf("profile_picture = $%d", paramCount))
 		updateValues = append(updateValues, user.ImageURL)
 		paramCount++
 	}
+
 	if user.Status != "" {
 		updateFields = append(updateFields, fmt.Sprintf("status = $%d", paramCount))
 		updateValues = append(updateValues, user.Status)
@@ -407,6 +427,7 @@ func UserUpdate(c echo.Context) error {
 
 	updateFields = append(updateFields, fmt.Sprintf("updated_at = CURRENT_TIMESTAMP"))
 
+	// Query untuk update data user
 	query := fmt.Sprintf("UPDATE users SET %s WHERE id = $%d RETURNING id, name, email, username, no_hp, role, status, language, profile_picture, created_at, updated_at",
 		strings.Join(updateFields, ", "), paramCount)
 
@@ -427,4 +448,30 @@ func UserUpdate(c echo.Context) error {
 		Data:    []models.User{updatedUser},
 		Message: "User updated successfully",
 	})
+}
+
+func moveFile(sourcePath string, destPath string) error {
+	sourceFile, err := os.Open(sourcePath)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	destFile, err := os.Create(destPath)
+	if err != nil {
+		return err
+	}
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, sourceFile)
+	if err != nil {
+		return err
+	}
+
+	// err = os.Remove(sourcePath)
+	// if err != nil {
+	// 	return err
+	// }
+
+	return nil
 }

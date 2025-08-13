@@ -51,8 +51,13 @@ func UploadHandler(c echo.Context) error {
 	}
 
 	uploadDir := "./temp"
-	err = os.MkdirAll(uploadDir, os.ModePerm)
-	if err != nil {
+	uploadDirFix := "./uploads"
+	if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"message": "internal server error",
+		})
+	}
+	if err := os.MkdirAll(uploadDirFix, os.ModePerm); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"message": "internal server error",
 		})
