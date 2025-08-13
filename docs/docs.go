@@ -15,6 +15,53 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/rooms": {
+            "post": {
+                "description": "Create a new room with name, type, picture, price_per_hour, and capacity",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rooms"
+                ],
+                "summary": "Endpoint create a new room",
+                "parameters": [
+                    {
+                        "description": "Room object",
+                        "name": "room",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateRoom"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer \u003cJWT Token\u003e",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.SuccessResponseRoom"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/snack": {
             "get": {
                 "description": "Snack",
@@ -430,6 +477,26 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "models.CreateRoom": {
+            "type": "object",
+            "properties": {
+                "capacity": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "picture": {
+                    "type": "string"
+                },
+                "price_per_hour": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
         "models.CreateUser": {
             "type": "object",
             "properties": {
@@ -532,6 +599,14 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "$ref": "#/definitions/models.TokenResetPassword"
+                }
+            }
+        },
+        "models.SuccessResponseRoom": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
                 }
             }
         },
