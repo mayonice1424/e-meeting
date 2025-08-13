@@ -22,6 +22,7 @@ func main() {
 	db := configDb.ConnectToDatabase()
 	defer db.Close()
 	e.Static("/temp", "./temp")
+	e.Static("/uploads", "./uploads")
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 	e.GET("/validate-token", func(c echo.Context) error {
 		claims, err := auth.ValidateTokenJWT(c)

@@ -20,6 +20,17 @@ type CreateUser struct {
 	Password         string `json:"password"`
 	Confirm_Password string `json:"confirm_password"`
 }
+
+type UpdateUser struct {
+	Email 					string `json:"email"`	
+	ImageURL 				string `json:"profile_picture"`
+	Language 				string `json:"language"`
+	Role 						string `json:"role"`
+	Status 					string `json:"status"`
+	Username 				string `json:"username"`
+	Password 				string `json:"password"`
+}
+
 type LoginUser struct {
 	Username         string `json:"username"`
 	Password         string `json:"password"`

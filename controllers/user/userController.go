@@ -12,6 +12,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -327,5 +328,103 @@ func UserById(c echo.Context) error {
 	return c.JSON(http.StatusOK, models.SuccessResponseUser{
 		Data:    []models.User{user},
 		Message: "User retrieved successfully",
+	})
+}
+
+// UserUpdate godoc
+// @Summary Endpoint for updating user by id
+// @Description Update User by id with id in the URL path
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path int true "User ID"
+// @Param Authorization header string true "Bearer <JWT Token>"
+// @Param user body models.UpdateUser true "User update object"
+// @Success 200 {object} models.SuccessResponseUser
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /api/v1/users/{id} [put]
+func UserUpdate(c echo.Context) error {
+	var user models.UpdateUser
+	err := c.Bind(&user)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "invalid request"})
+	}
+
+	userID := c.Param("id")
+	updateFields := []string{}
+	updateValues := []interface{}{}
+	paramCount := 1
+
+	// Menambahkan field yang ingin diupdate
+	if user.Email != "" {
+		updateFields = append(updateFields, fmt.Sprintf("email = $%d", paramCount))
+		updateValues = append(updateValues, user.Email)
+		paramCount++
+	}
+	if user.Username != "" {
+		updateFields = append(updateFields, fmt.Sprintf("username = $%d", paramCount))
+		updateValues = append(updateValues, user.Username)
+		paramCount++
+	}
+	if user.Language != "" {
+		updateFields = append(updateFields, fmt.Sprintf("language = $%d", paramCount))
+		updateValues = append(updateValues, user.Language)
+		paramCount++
+	}
+	if user.ImageURL != "" {
+		updateFields = append(updateFields, fmt.Sprintf("profile_picture = $%d", paramCount))
+		updateValues = append(updateValues, user.ImageURL)
+		paramCount++
+	}
+	if user.Status != "" {
+		updateFields = append(updateFields, fmt.Sprintf("status = $%d", paramCount))
+		updateValues = append(updateValues, user.Status)
+		paramCount++
+	}
+	if user.Role != "" {
+		updateFields = append(updateFields, fmt.Sprintf("role = $%d", paramCount))
+		updateValues = append(updateValues, user.Role)
+		paramCount++
+	}
+	if user.Password != "" {
+		if !PasswordValidation(user.Password) {
+			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Password must contain at least one lowercase letter, one uppercase letter, one digit, and one special character"})
+		}
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error hashing password"})
+		}
+		updateFields = append(updateFields, fmt.Sprintf("password = $%d", paramCount))
+		updateValues = append(updateValues, string(hashedPassword))
+		paramCount++
+	}
+
+	if len(updateFields) == 0 {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "No fields to update"})
+	}
+
+	updateFields = append(updateFields, fmt.Sprintf("updated_at = CURRENT_TIMESTAMP"))
+
+	query := fmt.Sprintf("UPDATE users SET %s WHERE id = $%d RETURNING id, name, email, username, no_hp, role, status, language, profile_picture, created_at, updated_at",
+		strings.Join(updateFields, ", "), paramCount)
+
+	db := configDb.ConnectToDatabase()
+	defer db.Close()
+
+	var updatedUser models.User
+	err = db.QueryRow(query, append(updateValues, userID)...).Scan(
+		&updatedUser.ID, &updatedUser.Name, &updatedUser.Email, &updatedUser.Username, &updatedUser.No_HP,
+		&updatedUser.Role, &updatedUser.Status, &updatedUser.Language, &updatedUser.Profile_Picture,
+		&updatedUser.Created_At, &updatedUser.Updated_At)
+	if err != nil {
+		fmt.Println("Error updating user:", err)
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "internal server error"})
+	}
+
+	return c.JSON(http.StatusOK, models.SuccessResponseUser{
+		Data:    []models.User{updatedUser},
+		Message: "User updated successfully",
 	})
 }

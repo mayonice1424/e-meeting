@@ -96,6 +96,23 @@ definitions:
       token:
         type: string
     type: object
+  models.UpdateUser:
+    properties:
+      email:
+        type: string
+      language:
+        type: string
+      password:
+        type: string
+      profile_picture:
+        type: string
+      role:
+        type: string
+      status:
+        type: string
+      username:
+        type: string
+    type: object
   models.UploadResponse:
     properties:
       data:
@@ -237,6 +254,49 @@ paths:
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Endpoint for user by id
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Update User by id with id in the URL path
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Bearer <JWT Token>
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: User update object
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateUser'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SuccessResponseUser'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Endpoint for updating user by id
       tags:
       - users
   /password/reset:

@@ -15,4 +15,5 @@ func RegisterRoutes(e *echo.Echo) {
 	group := e.Group("/api/v1")
 	group.Use(auth.AuthMiddleware)
 	group.GET("/users/:id", userController.UserById)
+	group.PUT("/users/:id", userController.UserUpdate)
 }
