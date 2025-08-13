@@ -96,6 +96,16 @@ definitions:
       token:
         type: string
     type: object
+  models.UploadResponse:
+    properties:
+      data:
+        properties:
+          imageURL:
+            type: string
+        type: object
+      message:
+        type: string
+    type: object
   models.User:
     properties:
       created_at:
@@ -124,6 +134,73 @@ definitions:
 info:
   contact: {}
 paths:
+  /api/v1/snack:
+    get:
+      consumes:
+      - application/json
+      description: Snack
+      parameters:
+      - description: Bearer <JWT Token>
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SuccessResponseSnack'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Endpoint for snack by id
+      tags:
+      - snacks
+  /api/v1/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload an image file and save it to the server
+      parameters:
+      - description: Bearer <JWT Token>
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: File to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UploadResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Upload file
+      tags:
+      - upload
   /api/v1/users/{id}:
     get:
       consumes:
@@ -232,33 +309,6 @@ paths:
       summary: Endpoint for user reset password
       tags:
       - Reset Password
-  /snack:
-    get:
-      consumes:
-      - application/json
-      description: Snack
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.SuccessResponseSnack'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-      summary: Endpoint for snack by id
-      tags:
-      - snacks
   /users/login:
     post:
       consumes:
