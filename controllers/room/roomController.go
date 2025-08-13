@@ -49,7 +49,7 @@ func GetRooms(c echo.Context) error {
 	if len(rooms) == 0 {
 		return c.JSON(http.StatusNotFound, models.ErrorResponse{Message: "No rooms found"})
 	}
-	return c.JSON(http.StatusOK, models.SuccessResponseRoom{Data: rooms, Message: "Rooms retrieved successfully"})
+	return c.JSON(http.StatusOK, models.SuccessResponseRooms{Data: rooms, Message: "Rooms retrieved successfully"})
 }
 
 // func GetRoomByID(c echo.Context) error {

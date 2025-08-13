@@ -20,3 +20,8 @@ type RoomById struct {
 type SuccessResponseRoom struct {
 	Message string      `json:"message"`
 }
+
+type SuccessResponseRooms struct {
+	Message string      `json:"message"`
+	Data    []RoomById  `json:"data"`
+}
