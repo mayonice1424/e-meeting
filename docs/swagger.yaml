@@ -170,6 +170,31 @@ info:
   contact: {}
 paths:
   /api/v1/rooms:
+    get:
+      consumes:
+      - application/json
+      description: Get all romms a new room with name, type, picture, price_per_hour,
+        and capacity
+      parameters:
+      - description: Bearer <JWT Token>
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SuccessResponseRoom'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Endpoint Get all rooms a new room
+      tags:
+      - rooms
     post:
       consumes:
       - application/json

@@ -14,31 +14,43 @@ import (
 	// "fmt"
 )
 
-// func GetRooms(c echo.Context) error {
-// 	db := configDb.ConnectToDatabase()
-// 	defer db.Close()
-// 	var rooms []models.Room
-// 	query := "SELECT id, name, type, picture, price_per_hour, capacity FROM room"
-// 	rows, err := db.Query(query)
-// 	if err != nil {
-// 		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Failed to retrieve rooms: " + err.Error()})
-// 	}
-// 	defer rows.Close()
-// 	for rows.Next() {
-// 		var room models.Room
-// 		if err := rows.Scan(&room.ID, &room.Name, &room.Type, &room.Picture, &room.PricePerHour, &room.Capacity); err != nil {
-// 			return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Failed to scan room: " + err.Error()})
-// 		}
-// 		rooms = append(rooms, room)
-// 	}
-// 	if err := rows.Err(); err != nil {
-// 		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Error iterating over rooms: " + err.Error()})
-// 	}
-// 	if len(rooms) == 0 {
-// 		return c.JSON(http.StatusNotFound, map[string]string{"message": "No rooms found"})
-// 	}
-// 	return c.JSON(http.StatusOK, rooms)
-// }
+// GetRooms godoc
+// @Summary Endpoint Get all rooms a new room
+// @Description Get all romms a new room with name, type, picture, price_per_hour, and capacity
+// @Tags rooms
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "Bearer <JWT Token>"
+// @Success 200 {object} models.SuccessResponseRoom
+// @Failure 400 {object} models.ErrorResponse
+// @Router /api/v1/rooms [get]
+func GetRooms(c echo.Context) error {
+	db := configDb.ConnectToDatabase()
+	defer db.Close()
+	query := "SELECT id, name, type, picture, price_per_hour, capacity FROM room"
+	rows, err := db.Query(query)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal Server Error :"})
+	}
+
+	defer rows.Close()
+	var rooms []models.RoomById
+	for rows.Next() {
+		var room models.RoomById
+		if err := rows.Scan(&room.ID, &room.Name, &room.Type, &room.Picture, &room.PricePerHour, &room.Capacity); err != nil {
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal Server Error: "})
+		}
+		rooms = append(rooms, room)
+	}
+
+	if err := rows.Err(); err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal Server Error: "})
+	}
+	if len(rooms) == 0 {
+		return c.JSON(http.StatusNotFound, models.ErrorResponse{Message: "No rooms found"})
+	}
+	return c.JSON(http.StatusOK, models.SuccessResponseRoom{Data: rooms, Message: "Rooms retrieved successfully"})
+}
 
 // func GetRoomByID(c echo.Context) error {
 // 	// Ambil parameter ID dari URL
