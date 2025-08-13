@@ -1,15 +1,25 @@
 package roomController
 
+<<<<<<< HEAD
 import (
 	"database/sql"
 	configDb "emeeting/config"
 	"emeeting/models"
 	"net/http"
 	"strconv"
+=======
+// import (
+// 	"net/http"
+// 	"strconv"
+// 	"database/sql"
+// 	configDb "emeeting/config"
+// 	"fmt"
+>>>>>>> adec5aa7faf61884b208b07fb9c0a278beec7930
 
-	"github.com/labstack/echo/v4"
-)
+// 	"github.com/labstack/echo/v4"
+// )
 
+<<<<<<< HEAD
 // Handlers
 func GetRooms(c echo.Context) error {
 	db := configDb.ConnectToDatabase()
@@ -110,3 +120,9 @@ func DeleteRoom(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "Room deleted successfully"})
 }
+=======
+// func CreateRoom(c echo.Context) error
+
+// }
+
+>>>>>>> adec5aa7faf61884b208b07fb9c0a278beec7930

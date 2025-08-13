@@ -14,11 +14,12 @@ import (
 // @Tags snacks
 // @Accept json
 // @Produce json
+// @Param Authorization header string true "Bearer <JWT Token>"
 // @Success 200 {object} models.SuccessResponseSnack
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 401 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
-// @Router /snack [get]
+// @Router /api/v1/snack [get]
 func GetSnacks(c echo.Context) error {
 	fmt.Println("Claims: test0")
 	db:= configDb.ConnectToDatabase()

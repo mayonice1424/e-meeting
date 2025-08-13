@@ -4,8 +4,9 @@ import (
 	"emeeting/config"
 	"emeeting/database"
 	"emeeting/middleware"
-	user "emeeting/routes/user"
 	snack "emeeting/routes/snack"
+	router "emeeting/routes/upload"
+	user "emeeting/routes/user"
 
 	"fmt"
 	"log"
@@ -20,6 +21,8 @@ func main() {
 	e := echo.New()
 	db := configDb.ConnectToDatabase()
 	defer db.Close()
+	e.Static("/temp", "./temp")
+	e.Static("/uploads", "./uploads")
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 	e.GET("/validate-token", func(c echo.Context) error {
 		claims, err := auth.ValidateTokenJWT(c)
@@ -31,6 +34,7 @@ func main() {
 	e.GET("/validate-refresh-token", auth.ValidateRefreshToken)
 	user.RegisterRoutes(e)
 	snack.SnackRoutes(e)
+	router.RegisterUploadRoutes(e)
 	err := createtable.CreatedUser(db)
 	if err != nil {
 		log.Fatal("Error creating table: ", err)

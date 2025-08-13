@@ -95,14 +95,6 @@ func ValidateTokenJWT(c echo.Context) (jwt.MapClaims, error) {
 	if tokenString == "" {
 		return nil, errors.New("authorization header is missing")
 	}
-	if tokenString[:7] != "Bearer " {
-		return nil, errors.New("invalid token format")
-	}
-	tokenString = tokenString[7:]
-	fmt.Println("INI AUTH HEADER", tokenString)
-	if tokenString == "" {
-		return nil, errors.New("token is empty")
-	}
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")
