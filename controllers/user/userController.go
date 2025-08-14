@@ -82,6 +82,28 @@ func UserRegister(c echo.Context) error {
 	if newUser.Password != newUser.Confirm_Password {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Password and Confirm Password do not match"})
 	}
+	if newUser.Email == "" || newUser.Username == "" || newUser.Password == "" {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Email, Username and Password are required"})
+	}
+	var existingEmail string
+	err = db.QueryRow("SELECT email FROM users WHERE email = $1", newUser.Email).Scan(&existingEmail)
+	if err != nil && err != sql.ErrNoRows {
+		log.Println("Error checking email:", err)
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal server error"})
+	}
+	if existingEmail != "" {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Email already exists"})
+	}
+	var existingUsername string
+	err = db.QueryRow("SELECT username FROM users WHERE username = $1", newUser.Username).Scan(&existingUsername)
+	if err != nil && err != sql.ErrNoRows {
+		log.Println("Error checking username:", err)
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal server error"})
+	}
+	if existingUsername != "" {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Username already exists"})
+	}
+
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newUser.Password), bcrypt.DefaultCost)
 	if err != nil {
