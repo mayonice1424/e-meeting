@@ -40,11 +40,58 @@ definitions:
       username:
         type: string
     type: object
+  models.PersonalData:
+    properties:
+      company:
+        type: string
+      duration:
+        type: integer
+      endTime:
+        type: string
+      name:
+        type: string
+      participant:
+        type: integer
+      phoneNumber:
+        type: string
+      startTime:
+        type: string
+    type: object
+  models.ReservationCalculationData:
+    properties:
+      personalData:
+        $ref: '#/definitions/models.PersonalData'
+      rooms:
+        items:
+          $ref: '#/definitions/models.RoomCalculation'
+        type: array
+      total:
+        type: number
+    type: object
   models.ResetPasswordById:
     properties:
       confirm_password:
         type: string
       new_password:
+        type: string
+    type: object
+  models.RoomCalculation:
+    properties:
+      capacity:
+        type: integer
+      imageURL:
+        type: string
+      name:
+        type: string
+      pricePerHour:
+        type: number
+      snack:
+        $ref: '#/definitions/models.SnackCategory'
+      subTotalRoom:
+        type: number
+      subTotalSnack:
+        type: number
+      type:
         type: string
     type: object
   models.Snack:
@@ -60,6 +107,19 @@ definitions:
       unit:
         type: string
     type: object
+  models.SnackCategory:
+    properties:
+      category:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      price:
+        type: number
+      unit:
+        type: string
+    type: object
   models.SuccessResponse:
     properties:
       data:
@@ -71,6 +131,13 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/models.Token'
+      message:
+        type: string
+    type: object
+  models.SuccessResponseReservationCalculation:
+    properties:
+      data:
+        $ref: '#/definitions/models.ReservationCalculationData'
       message:
         type: string
     type: object
@@ -169,6 +236,84 @@ definitions:
 info:
   contact: {}
 paths:
+  /api/v1/reservation/calculation:
+    get:
+      consumes:
+      - application/json
+      description: Calculate the total cost for a room reservation based on room,
+        snack, participant count, and time
+      parameters:
+      - description: Room ID
+        in: query
+        name: room_id
+        required: true
+        type: integer
+      - description: Snack ID
+        in: query
+        name: snack_id
+        type: integer
+      - description: Start time (YYYY-MM-DD HH:MM:SS)
+        in: query
+        name: startTime
+        required: true
+        type: string
+      - description: End time (YYYY-MM-DD HH:MM:SS)
+        in: query
+        name: endTime
+        required: true
+        type: string
+      - description: Number of participants
+        in: query
+        name: participant
+        required: true
+        type: integer
+      - description: User ID
+        in: query
+        name: user_id
+        required: true
+        type: integer
+      - description: User name
+        in: query
+        name: name
+        required: true
+        type: string
+      - description: Phone number
+        in: query
+        name: phoneNumber
+        required: true
+        type: string
+      - description: Company name
+        in: query
+        name: company
+        required: true
+        type: string
+      - description: Bearer <JWT Token>
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SuccessResponseReservationCalculation'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Endpoint for calculating reservation
+      tags:
+      - reservation
   /api/v1/rooms:
     get:
       consumes:
