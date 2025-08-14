@@ -12,9 +12,10 @@ func RoomRoutes(e *echo.Echo) {
 	group.Use(auth.AuthMiddleware)
 	group.POST("/rooms", roomController.CreateRoom)
 	group.GET("/rooms", roomController.GetRooms)
+	group.PUT("/rooms/:id", roomController.UpdateRoom)
+
 	// e.GET("/rooms", roomController.GetRooms)
 	// e.GET("/rooms/:id", roomController.GetRoomByID)
 	// e.POST("/rooms", roomController.CreateRoom)
-	// e.PUT("/rooms/:id", roomController.UpdateRoom)
 	// e.DELETE("/rooms/:id", roomController.DeleteRoom)
 }

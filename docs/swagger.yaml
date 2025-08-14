@@ -173,7 +173,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get all romms a new room with name, type, picture, price_per_hour,
+      description: Get all rooms with pagination, name, type, picture, price_per_hour,
         and capacity
       parameters:
       - description: Bearer <JWT Token>
@@ -181,6 +181,28 @@ paths:
         name: Authorization
         required: true
         type: string
+      - description: Room name
+        in: query
+        name: name
+        type: string
+      - description: Room type
+        in: query
+        name: type
+        type: string
+      - description: Room capacity
+        in: query
+        name: capacity
+        type: integer
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of records per page
+        in: query
+        name: pageSize
+        type: integer
       produces:
       - application/json
       responses:
@@ -192,7 +214,19 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/models.ErrorResponse'
-      summary: Endpoint Get all rooms a new room
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Endpoint Get all rooms with pagination
       tags:
       - rooms
     post:
@@ -224,6 +258,50 @@ paths:
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Endpoint create a new room
+      tags:
+      - rooms
+  /api/v1/rooms/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Update room by id with id in the URL path
+      parameters:
+      - description: Room ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Bearer <JWT Token>
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Room update object
+        in: body
+        name: room
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateRoom'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SuccessResponseRoom'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Endpoint for updating room by id
       tags:
       - rooms
   /api/v1/snack:

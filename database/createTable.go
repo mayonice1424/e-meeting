@@ -86,7 +86,9 @@ func CreateDataRoom(db *sql.DB) error {
     type VARCHAR(20) NOT NULL,
     picture VARCHAR(100) NOT NULL,
     price_per_hour INT NOT NULL,
-    capacity INT NOT NULL
+    capacity INT NOT NULL,
+		created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 		)
 		`
 	_, err := db.Exec(query)
