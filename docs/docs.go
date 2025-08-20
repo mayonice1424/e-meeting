@@ -15,6 +15,53 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/reservations": {
+            "post": {
+                "description": "Get all reservations with name, phoneNumber, company, notes, room",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reservations"
+                ],
+                "summary": "Endpoint Get all reservations a reservation",
+                "parameters": [
+                    {
+                        "description": "Reservation Request",
+                        "name": "reservation",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ReservationRequest"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer \u003cJWT Token\u003e",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.SuccessResponseReservations"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/rooms": {
             "get": {
                 "description": "Get all rooms with pagination, name, type, picture, price_per_hour, and capacity",
@@ -693,6 +740,52 @@ const docTemplate = `{
                 }
             }
         },
+        "models.ReservationRequest": {
+            "type": "object",
+            "properties": {
+                "company": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "phone_number": {
+                    "type": "string"
+                },
+                "rooms": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Reservation_rooms"
+                    }
+                }
+            }
+        },
+        "models.Reservation_rooms": {
+            "type": "object",
+            "properties": {
+                "end_time": {
+                    "type": "string"
+                },
+                "participant": {
+                    "type": "integer"
+                },
+                "reservation_id": {
+                    "type": "integer"
+                },
+                "room_id": {
+                    "type": "integer"
+                },
+                "snack_id": {
+                    "type": "integer"
+                },
+                "start_time": {
+                    "type": "string"
+                }
+            }
+        },
         "models.ResetPasswordById": {
             "type": "object",
             "properties": {
@@ -741,6 +834,14 @@ const docTemplate = `{
                 "data": {
                     "$ref": "#/definitions/models.Token"
                 },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.SuccessResponseReservations": {
+            "type": "object",
+            "properties": {
                 "message": {
                     "type": "string"
                 }

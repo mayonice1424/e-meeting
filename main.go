@@ -8,6 +8,7 @@ import (
 	router "emeeting/routes/upload"
 	user "emeeting/routes/user"
 	room "emeeting/routes/room"
+	reservation "emeeting/routes/reservation"
 
 	"fmt"
 	"log"
@@ -37,6 +38,7 @@ func main() {
 	snack.SnackRoutes(e)
 	router.RegisterUploadRoutes(e)
 	room.RoomRoutes(e)
+	reservation.ReservationRoutes(e)
 	err := createtable.CreatedUser(db)
 	if err != nil {
 		log.Fatal("Error creating table: ", err)

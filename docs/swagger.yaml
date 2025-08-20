@@ -40,6 +40,36 @@ definitions:
       username:
         type: string
     type: object
+  models.Reservation_rooms:
+    properties:
+      end_time:
+        type: string
+      participant:
+        type: integer
+      reservation_id:
+        type: integer
+      room_id:
+        type: integer
+      snack_id:
+        type: integer
+      start_time:
+        type: string
+    type: object
+  models.ReservationRequest:
+    properties:
+      company:
+        type: string
+      name:
+        type: string
+      notes:
+        type: string
+      phone_number:
+        type: string
+      rooms:
+        items:
+          $ref: '#/definitions/models.Reservation_rooms'
+        type: array
+    type: object
   models.ResetPasswordById:
     properties:
       confirm_password:
@@ -71,6 +101,11 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/models.Token'
+      message:
+        type: string
+    type: object
+  models.SuccessResponseReservations:
+    properties:
       message:
         type: string
     type: object
@@ -169,6 +204,37 @@ definitions:
 info:
   contact: {}
 paths:
+  /api/v1/reservations:
+    post:
+      consumes:
+      - application/json
+      description: Get all reservations with name, phoneNumber, company, notes, room
+      parameters:
+      - description: Reservation Request
+        in: body
+        name: reservation
+        required: true
+        schema:
+          $ref: '#/definitions/models.ReservationRequest'
+      - description: Bearer <JWT Token>
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.SuccessResponseReservations'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Endpoint Get all reservations a reservation
+      tags:
+      - reservations
   /api/v1/rooms:
     get:
       consumes:
