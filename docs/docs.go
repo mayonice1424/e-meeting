@@ -15,6 +15,59 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/reservation": {
+            "post": {
+                "description": "Create a reservation with room details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reservation"
+                ],
+                "summary": "Create a new reservation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer \u003cJWT Token\u003e",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Reservation Information",
+                        "name": "reservation",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.ReservationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.SuccessResponseCreateReservation"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/reservation/calculation": {
             "get": {
                 "description": "Calculate the total cost for a room reservation based on room, snack, participant count, and time",
@@ -848,6 +901,32 @@ const docTemplate = `{
                 }
             }
         },
+        "models.ReservationRequest": {
+            "type": "object",
+            "properties": {
+                "company": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "phoneNumber": {
+                    "type": "string"
+                },
+                "rooms": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.RoomRequest"
+                    }
+                },
+                "userID": {
+                    "type": "integer"
+                }
+            }
+        },
         "models.ResetPasswordById": {
             "type": "object",
             "properties": {
@@ -884,6 +963,26 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.RoomRequest": {
+            "type": "object",
+            "properties": {
+                "endTime": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "participant": {
+                    "type": "integer"
+                },
+                "snackID": {
+                    "type": "integer"
+                },
+                "startTime": {
                     "type": "string"
                 }
             }
@@ -934,6 +1033,14 @@ const docTemplate = `{
                 "data": {
                     "type": "integer"
                 },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.SuccessResponseCreateReservation": {
+            "type": "object",
+            "properties": {
                 "message": {
                     "type": "string"
                 }

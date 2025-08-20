@@ -45,3 +45,23 @@ type SnackCategory struct {
 	Price    float64 `json:"price"`
 	Category string  `json:"category"`
 }
+
+type ReservationRequest struct {
+	UserID     int    `json:"userID"`
+	Name       string `json:"name"`
+	PhoneNumber string `json:"phoneNumber"`
+	Company    string `json:"company"`
+	Notes      string `json:"notes"`
+	Rooms      []RoomRequest `json:"rooms"`
+}
+
+type RoomRequest struct {
+	ID          int       `json:"id"`
+	StartTime   time.Time `json:"startTime"`
+	EndTime     time.Time `json:"endTime"`
+	Participant int       `json:"participant"`
+	SnackID     int       `json:"snackID"`
+}
+type SuccessResponseCreateReservation struct {
+	Message string `json:"message"`
+}

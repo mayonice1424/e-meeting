@@ -68,6 +68,23 @@ definitions:
       total:
         type: number
     type: object
+  models.ReservationRequest:
+    properties:
+      company:
+        type: string
+      name:
+        type: string
+      notes:
+        type: string
+      phoneNumber:
+        type: string
+      rooms:
+        items:
+          $ref: '#/definitions/models.RoomRequest'
+        type: array
+      userID:
+        type: integer
+    type: object
   models.ResetPasswordById:
     properties:
       confirm_password:
@@ -92,6 +109,19 @@ definitions:
       subTotalSnack:
         type: number
       type:
+        type: string
+    type: object
+  models.RoomRequest:
+    properties:
+      endTime:
+        type: string
+      id:
+        type: integer
+      participant:
+        type: integer
+      snackID:
+        type: integer
+      startTime:
         type: string
     type: object
   models.Snack:
@@ -124,6 +154,11 @@ definitions:
     properties:
       data:
         type: integer
+      message:
+        type: string
+    type: object
+  models.SuccessResponseCreateReservation:
+    properties:
       message:
         type: string
     type: object
@@ -236,6 +271,41 @@ definitions:
 info:
   contact: {}
 paths:
+  /api/v1/reservation:
+    post:
+      consumes:
+      - application/json
+      description: Create a reservation with room details
+      parameters:
+      - description: Bearer <JWT Token>
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Reservation Information
+        in: body
+        name: reservation
+        required: true
+        schema:
+          $ref: '#/definitions/models.ReservationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.SuccessResponseCreateReservation'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Create a new reservation
+      tags:
+      - reservation
   /api/v1/reservation/calculation:
     get:
       consumes:

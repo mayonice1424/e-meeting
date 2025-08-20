@@ -11,5 +11,6 @@ func ReservationRoutes(e *echo.Echo){
 	group := e.Group("/api/v1")
 	group.Use(auth.AuthMiddleware)
 	group.GET("/reservation/calculation", reservationController.ReservationCalculation)
+	group.POST("/reservation", reservationController.CreateReservation)
 	// group.POST("/reservations", reservationController.)
 }

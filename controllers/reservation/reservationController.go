@@ -122,3 +122,83 @@ func ReservationCalculation(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, response)
 }
+
+// CreateReservation godoc
+// @Summary Create a new reservation
+// @Description Create a reservation with room details
+// @Tags reservation
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "Bearer <JWT Token>"
+// @Param reservation body models.ReservationRequest true "Reservation Information"
+// @Success 201 {object} models.SuccessResponseCreateReservation
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /api/v1/reservation [post]
+func CreateReservation(c echo.Context) error {
+	var reservation models.ReservationRequest
+	if err := c.Bind(&reservation); err != nil {
+		fmt.Println("Error binding reservation request:", err)
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid request body"})
+	}
+	db := configDb.ConnectToDatabase()
+	defer db.Close()
+
+	tx, err := db.Begin()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Database error"})
+	}
+		var total_invoice float64
+
+	for _, room := range reservation.Rooms {
+		var roomPrice float64
+		var roomCapacity int
+		var snackPrice float64
+		roomQuery := `SELECT price_per_hour, capacity FROM room WHERE id = $1`
+		err := tx.QueryRow(roomQuery, room.ID).Scan(&roomPrice, &roomCapacity)
+		if err != nil {
+			tx.Rollback()
+			fmt.Println("Error fetching room data:", err)
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to fetch room data"})
+		}
+		snackQuery := `SELECT price FROM snack_category WHERE id = $1`
+		err = tx.QueryRow(snackQuery, room.SnackID).Scan(&snackPrice)
+		if err != nil {
+			tx.Rollback()
+			fmt.Println("Error fetching snack data:", err)
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to fetch snack data"})
+		}
+		duration := int(room.EndTime.Sub(room.StartTime).Hours())
+		roomTotalPrice := roomPrice * float64(duration)
+		snackTotalPrice := float64(room.Participant) * snackPrice
+		total_invoice += roomTotalPrice + snackTotalPrice
+	}
+	reservationQuery := `
+		INSERT INTO data_personal_reservation (id_user, name, no_hp, company_name, reservation_status, note, total_invoice)
+		VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
+	var reservationID int
+	err = tx.QueryRow(reservationQuery, reservation.UserID, reservation.Name, reservation.PhoneNumber, reservation.Company, "Booked", reservation.Notes, total_invoice).Scan(&reservationID)
+	if err != nil {
+		tx.Rollback()
+		fmt.Println("Error creating reservation:", err)
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to create reservation"})
+	}
+
+	for _, room := range reservation.Rooms {
+		roomQuery := `
+			INSERT INTO data_booking_room (id_room, reservation_id, snack_id, start_date, end_date, total_participant, duration, room_price, total_snack, sub_total_invoice, snack_price, sub_total_room_price, sub_total_snack_price)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
+		_, err := tx.Exec(roomQuery, room.ID, reservationID, room.SnackID, room.StartTime, room.EndTime, room.Participant, room.EndTime.Sub(room.StartTime).Hours(), 100, room.Participant*10, 1000, 500, 100, 50)
+		if err != nil {
+			tx.Rollback()
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to book room"})
+		}
+	}
+	err = tx.Commit()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to commit reservation"})
+	}
+	return c.JSON(http.StatusCreated, models.SuccessResponseCreateReservation{
+		Message: "Reservation created successfully",
+	})
+}
