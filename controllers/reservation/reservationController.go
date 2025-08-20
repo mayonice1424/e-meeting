@@ -1,6 +1,7 @@
 package reservation
 
 import (
+	"database/sql"
 	configDb "emeeting/config"
 	"emeeting/models"
 	"fmt"
@@ -148,56 +149,108 @@ func CreateReservation(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Database error"})
 	}
-		var total_invoice float64
+
+	var total_invoice float64
+	var roomPrice float64
+	var snackPrice float64
 
 	for _, room := range reservation.Rooms {
-		var roomPrice float64
+		var existingBookingStatus string
+		roomBookingQuery := `
+		SELECT r.reservation_status 
+		FROM data_booking_room b
+		JOIN data_personal_reservation r
+    ON b.reservation_id = r.id
+		WHERE b.id_room = $1
+    AND (b.start_date, b.end_date) OVERLAPS ($2, $3)  -- Pastikan tipe data sudah sesuai
+    AND r.reservation_status IN ('Booked', 'Paid')`
+		err := tx.QueryRow(roomBookingQuery, room.ID, room.StartTime, room.EndTime).Scan(&existingBookingStatus)
+		if err == nil { 
+			tx.Rollback()
+			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: fmt.Sprintf("Room %d is already booked or paid for the requested time", room.ID)})
+		} else if err != sql.ErrNoRows { 
+			tx.Rollback() 
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to check room availability"})
+		}
+
+		if room.StartTime.After(room.EndTime) {
+			tx.Rollback() 
+			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "End time cannot be earlier than start time"})
+		}
 		var roomCapacity int
-		var snackPrice float64
-		roomQuery := `SELECT price_per_hour, capacity FROM room WHERE id = $1`
-		err := tx.QueryRow(roomQuery, room.ID).Scan(&roomPrice, &roomCapacity)
+		roomQuery := `SELECT capacity FROM room WHERE id = $1`
+		err = tx.QueryRow(roomQuery, room.ID).Scan(&roomCapacity)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				fmt.Println("Room not found:", room.ID)
+				tx.Rollback()
+				return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: fmt.Sprintf("Room ID %d not found", room.ID)})
+			}
+			tx.Rollback()
+			fmt.Println("Error fetching room capacity:", err)
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to fetch room capacity"})
+		}
+
+		if room.Participant > roomCapacity {
+			tx.Rollback()
+			return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+				Message: fmt.Sprintf("The number of participants (%d) exceeds the room capacity (%d)", room.Participant, roomCapacity),
+			})
+		}
+
+		err = tx.QueryRow(`SELECT price_per_hour FROM room WHERE id = $1`, room.ID).Scan(&roomPrice)
 		if err != nil {
 			tx.Rollback()
 			fmt.Println("Error fetching room data:", err)
 			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to fetch room data"})
 		}
-		snackQuery := `SELECT price FROM snack_category WHERE id = $1`
-		err = tx.QueryRow(snackQuery, room.SnackID).Scan(&snackPrice)
+
+		err = tx.QueryRow(`SELECT price FROM snack_category WHERE id = $1`, room.SnackID).Scan(&snackPrice)
 		if err != nil {
 			tx.Rollback()
 			fmt.Println("Error fetching snack data:", err)
 			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to fetch snack data"})
 		}
+
 		duration := int(room.EndTime.Sub(room.StartTime).Hours())
+
 		roomTotalPrice := roomPrice * float64(duration)
+
 		snackTotalPrice := float64(room.Participant) * snackPrice
+
 		total_invoice += roomTotalPrice + snackTotalPrice
 	}
+
 	reservationQuery := `
 		INSERT INTO data_personal_reservation (id_user, name, no_hp, company_name, reservation_status, note, total_invoice)
 		VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`
 	var reservationID int
 	err = tx.QueryRow(reservationQuery, reservation.UserID, reservation.Name, reservation.PhoneNumber, reservation.Company, "Booked", reservation.Notes, total_invoice).Scan(&reservationID)
 	if err != nil {
-		tx.Rollback()
+		tx.Rollback() 
 		fmt.Println("Error creating reservation:", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to create reservation"})
 	}
 
 	for _, room := range reservation.Rooms {
+		duration := int(room.EndTime.Sub(room.StartTime).Hours())
+
 		roomQuery := `
 			INSERT INTO data_booking_room (id_room, reservation_id, snack_id, start_date, end_date, total_participant, duration, room_price, total_snack, sub_total_invoice, snack_price, sub_total_room_price, sub_total_snack_price)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
-		_, err := tx.Exec(roomQuery, room.ID, reservationID, room.SnackID, room.StartTime, room.EndTime, room.Participant, room.EndTime.Sub(room.StartTime).Hours(), 100, room.Participant*10, 1000, 500, 100, 50)
+
+		_, err := tx.Exec(roomQuery, room.ID, reservationID, room.SnackID, room.StartTime, room.EndTime, room.Participant, duration, roomPrice, float64(room.Participant)*snackPrice, total_invoice, snackPrice, roomPrice*float64(duration), snackPrice*float64(room.Participant))
 		if err != nil {
-			tx.Rollback()
+			tx.Rollback() 
 			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to book room"})
 		}
 	}
+
 	err = tx.Commit()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to commit reservation"})
 	}
+
 	return c.JSON(http.StatusCreated, models.SuccessResponseCreateReservation{
 		Message: "Reservation created successfully",
 	})
