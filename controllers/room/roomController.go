@@ -5,12 +5,12 @@ import (
 	configDb "emeeting/config"
 	"emeeting/models"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
-	"strings"
-	"io"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	_ "github.com/lib/pq"
@@ -39,18 +39,15 @@ func GetRooms(c echo.Context) error {
 	db := configDb.ConnectToDatabase()
 	defer db.Close()
 
-	// Read query parameters
 	name := c.QueryParam("name")
 	roomType := c.QueryParam("type")
 	capacity := c.QueryParam("capacity")
 	pageStr := c.QueryParam("page")
 	pageSizeStr := c.QueryParam("pageSize")
 
-	// Default values for pagination
 	page := 1
 	pageSize := 10
 
-	// Parse page and pageSize query params
 	if pageStr != "" {
 		page, _ = strconv.Atoi(pageStr)
 		if page <= 0 {
@@ -64,13 +61,10 @@ func GetRooms(c echo.Context) error {
 		}
 	}
 
-	// Calculate offset
 	offset := (page - 1) * pageSize
 
-	// Building query to fetch filtered rooms with pagination
 	query := "SELECT id, name, type, picture, price_per_hour, capacity, created_at, updated_at FROM room WHERE 1=1"
 
-	// Add filters based on query params
 	var queryParams []interface{}
 	paramCount := 1
 
@@ -136,6 +130,87 @@ func GetRooms(c echo.Context) error {
 	})
 }
 
+// DeleteRoom godoc
+// @Summary Endpoint for Delete Room by id
+// @Description Delete Room by id with id in the URL path
+// @Tags rooms
+// @Accept json
+// @Produce json
+// @Param id path int true "Room ID"
+// @Param Authorization header string true "Bearer <JWT Token>" 
+// @Success 200 {object} models.SuccessResponseRoom
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /api/v1/rooms/{id} [delete]
+func DeleteRoom(c echo.Context) error {
+	db := configDb.ConnectToDatabase()
+	defer db.Close()
+
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Room ID is required"})
+	}
+	if _, err := strconv.Atoi(id); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid Room ID"})
+	}
+var statuses []string
+rows, err := db.Query("SELECT dpr.reservation_status FROM data_booking_room dbr LEFT JOIN data_personal_reservation dpr ON dbr.reservation_id = dpr.id WHERE dbr.id_room = $1", id)
+if err != nil {
+	return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to retrieve room status"})
+}
+defer rows.Close()
+
+for rows.Next() {
+	var status string
+	if err := rows.Scan(&status); err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to scan status"})
+	}
+	statuses = append(statuses, status)
+}
+if err := rows.Err(); err != nil {
+	return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error occurred while reading results"})
+}
+
+fmt.Println("Statuses:", statuses)
+
+for _, status := range statuses {
+	if status == "Booked" || status == "Paid" {
+		return c.JSON(http.StatusConflict, models.ErrorResponse{Message: "Room is currently booked"})
+	}
+}
+
+	var pictureUrl string
+	err = db.QueryRow("SELECT picture FROM room WHERE id = $1", id).Scan(&pictureUrl)
+	if err != nil {
+		if err.Error() == "no rows in result set" {
+			return c.JSON(http.StatusNotFound, models.ErrorResponse{Message: "Room not found"})
+		}
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to retrieve room picture"})
+	}
+
+	if pictureUrl != "" {
+		parts := strings.Split(pictureUrl, "/uploads/")
+		if len(parts) == 2 {
+			fileName := parts[1]
+
+			filePath := filepath.Join("uploads", fileName)
+
+			err := os.Remove(filePath)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: fmt.Sprintf("Failed to delete file: %s", fileName)})
+			}
+		}
+	}
+	query := "DELETE FROM room WHERE id = $1"
+	_, err = db.Exec(query, id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to delete room"})
+	}
+
+	return c.JSON(http.StatusOK, models.SuccessResponseRoom{Message: "Room deleted successfully"})
+}
 
 // func GetRoomByID(c echo.Context) error {
 // 	// Ambil parameter ID dari URL
@@ -277,18 +352,6 @@ func UpdateRoom(c echo.Context) error {
 	return c.JSON(http.StatusOK, models.SuccessResponseRoom{Message: "Room updated successfully"})
 }
 
-func DeleteRoom(c echo.Context) error {
-	db := configDb.ConnectToDatabase()
-	defer db.Close()
-	id := c.Param("id")
-	query := "DELETE FROM rooms WHERE id=$1"
-	_, err := db.Exec(query, id)
-	if err != nil {
-		return c.JSON(http.StatusNotFound, map[string]string{"message": "Failed to delete room"})
-	}
-
-	return c.JSON(http.StatusOK, map[string]string{"message": "Room deleted successfully"})
-}
 
 func moveFile(sourcePath string, destPath string) error {
 	sourceFile, err := os.Open(sourcePath)

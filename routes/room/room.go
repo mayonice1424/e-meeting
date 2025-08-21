@@ -13,6 +13,8 @@ func RoomRoutes(e *echo.Echo) {
 	group.POST("/rooms", roomController.CreateRoom)
 	group.GET("/rooms", roomController.GetRooms)
 	group.PUT("/rooms/:id", roomController.UpdateRoom)
+	group.DELETE("/rooms/:id", roomController.DeleteRoom)
+
 
 	// e.GET("/rooms", roomController.GetRooms)
 	// e.GET("/rooms/:id", roomController.GetRoomByID)
