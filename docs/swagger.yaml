@@ -195,6 +195,11 @@ definitions:
       message:
         type: string
     type: object
+  models.SuccessResponseUpdateReservationStatus:
+    properties:
+      message:
+        type: string
+    type: object
   models.SuccessResponseUser:
     properties:
       data:
@@ -214,6 +219,12 @@ definitions:
   models.TokenResetPassword:
     properties:
       token:
+        type: string
+    type: object
+  models.UpdateReservationStatusRequest:
+    properties:
+      status:
+        description: e.g., "confirmed", "cancelled", etc.
         type: string
     type: object
   models.UpdateUser:
@@ -382,6 +393,50 @@ paths:
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Endpoint for calculating reservation
+      tags:
+      - reservation
+  /api/v1/reservation/status/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Update the status of a reservation
+      parameters:
+      - description: Reservation ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Bearer <JWT Token>
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: New reservation status
+        in: body
+        name: reservation
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateReservationStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SuccessResponseUpdateReservationStatus'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Update reservation status
       tags:
       - reservation
   /api/v1/rooms:

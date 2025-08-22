@@ -65,3 +65,11 @@ type RoomRequest struct {
 type SuccessResponseCreateReservation struct {
 	Message string `json:"message"`
 }
+
+type UpdateReservationStatusRequest struct {
+	Status        string `json:"status"` // e.g., "confirmed", "cancelled", etc.	
+}
+
+type SuccessResponseUpdateReservationStatus struct {
+	Message string `json:"message"`	
+}

@@ -1,16 +1,17 @@
 package router
 
 import (
-	auth "emeeting/middleware"
 	reservationController "emeeting/controllers/reservation"
+	auth "emeeting/middleware"
 
 	"github.com/labstack/echo/v4"
 )
 
-func ReservationRoutes(e *echo.Echo){
+func ReservationRoutes(e *echo.Echo) {
 	group := e.Group("/api/v1")
 	group.Use(auth.AuthMiddleware)
 	group.GET("/reservation/calculation", reservationController.ReservationCalculation)
 	group.POST("/reservation", reservationController.CreateReservation)
+	group.PUT("/reservation/status/:id", reservationController.UpdateReservationStatus)
 	// group.POST("/reservations", reservationController.)
 }

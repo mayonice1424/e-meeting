@@ -98,14 +98,14 @@ func ReservationCalculation(c echo.Context) error {
 		Data: models.ReservationCalculationData{
 			Rooms: []models.RoomCalculation{
 				{
-					Name:       room.Name,
-					PricePerHour: float64(room.PricePerHour),
-					ImageURL:   room.Picture,
-					Capacity:   room.Capacity,
-					Type:       room.Type,
+					Name:          room.Name,
+					PricePerHour:  float64(room.PricePerHour),
+					ImageURL:      room.Picture,
+					Capacity:      room.Capacity,
+					Type:          room.Type,
 					SubTotalSnack: subTotalSnack,
-					SubTotalRoom: subTotalRoom,
-					Snack:      snack,
+					SubTotalRoom:  subTotalRoom,
+					Snack:         snack,
 				},
 			},
 			PersonalData: models.PersonalData{
@@ -165,16 +165,16 @@ func CreateReservation(c echo.Context) error {
     AND (b.start_date, b.end_date) OVERLAPS ($2, $3)  -- Pastikan tipe data sudah sesuai
     AND r.reservation_status IN ('Booked', 'Paid')`
 		err := tx.QueryRow(roomBookingQuery, room.ID, room.StartTime, room.EndTime).Scan(&existingBookingStatus)
-		if err == nil { 
+		if err == nil {
 			tx.Rollback()
 			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: fmt.Sprintf("Room %d is already booked or paid for the requested time", room.ID)})
-		} else if err != sql.ErrNoRows { 
-			tx.Rollback() 
+		} else if err != sql.ErrNoRows {
+			tx.Rollback()
 			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to check room availability"})
 		}
 
 		if room.StartTime.After(room.EndTime) {
-			tx.Rollback() 
+			tx.Rollback()
 			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "End time cannot be earlier than start time"})
 		}
 		var roomCapacity int
@@ -227,7 +227,7 @@ func CreateReservation(c echo.Context) error {
 	var reservationID int
 	err = tx.QueryRow(reservationQuery, reservation.UserID, reservation.Name, reservation.PhoneNumber, reservation.Company, "Booked", reservation.Notes, total_invoice).Scan(&reservationID)
 	if err != nil {
-		tx.Rollback() 
+		tx.Rollback()
 		fmt.Println("Error creating reservation:", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to create reservation"})
 	}
@@ -241,7 +241,7 @@ func CreateReservation(c echo.Context) error {
 
 		_, err := tx.Exec(roomQuery, room.ID, reservationID, room.SnackID, room.StartTime, room.EndTime, room.Participant, duration, roomPrice, float64(room.Participant)*snackPrice, total_invoice, snackPrice, roomPrice*float64(duration), snackPrice*float64(room.Participant))
 		if err != nil {
-			tx.Rollback() 
+			tx.Rollback()
 			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to book room"})
 		}
 	}
@@ -253,5 +253,60 @@ func CreateReservation(c echo.Context) error {
 
 	return c.JSON(http.StatusCreated, models.SuccessResponseCreateReservation{
 		Message: "Reservation created successfully",
+	})
+}
+
+// UpdateReservationStatus godoc
+// @Summary Update reservation status
+// @Description Update the status of a reservation
+// @Tags reservation
+// @Accept json
+// @Produce json
+// @Param id path int true "Reservation ID"
+// @Param Authorization header string true "Bearer <JWT Token>"
+// @Param reservation body models.UpdateReservationStatusRequest true "New reservation status"
+// @Success 200 {object} models.SuccessResponseUpdateReservationStatus
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /api/v1/reservation/status/{id} [put]
+func UpdateReservationStatus(c echo.Context) error {
+	reservationID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid reservation ID"})
+	}
+
+	var request models.UpdateReservationStatusRequest
+	if err := c.Bind(&request); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid request body"})
+	}
+
+	db := configDb.ConnectToDatabase()
+	defer db.Close()
+
+	// Get current status
+	var currentStatus string
+	query := "SELECT reservation_status FROM data_personal_reservation WHERE id = $1"
+	err = db.QueryRow(query, reservationID).Scan(&currentStatus)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.JSON(http.StatusNotFound, models.ErrorResponse{Message: "url not found"})
+		}
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal server error"})
+	}
+
+	// Check if already canceled or paid
+	if currentStatus == "Cancelled" || currentStatus == "Paid" {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "reservation already cancelled/paid"})
+	}
+
+	// Update Status
+	updateQuery := "UPDATE data_personal_reservation SET reservation_status = $1 WHERE id = $2"
+	_, err = db.Exec(updateQuery, request.Status, reservationID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal server error"})
+	}
+	return c.JSON(http.StatusOK, models.SuccessResponseUpdateReservationStatus{
+		Message: "Update status successfully",
 	})
 }
