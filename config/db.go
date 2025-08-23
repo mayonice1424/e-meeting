@@ -1,24 +1,23 @@
-
-
 package configDb
 
 import (
-	"database/sql"
+	"database/sql" // query builder
 	"fmt"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 	"log"
 	"os"
-	"github.com/joho/godotenv"
-
-	_ "github.com/lib/pq"
 )
 
-
 var (
-	dbHost     string
-	dbPort     string
-	dbUser     string
-	dbPassword string
-	dbName     string
+	dbHost            string
+	dbPort            string
+	dbUser            string
+	dbPassword        string
+	dbName            string
+	JwtExpirationTime string
+	JwtRefreshTime    string
+	DB                *sql.DB
 )
 
 func init() {
@@ -26,11 +25,13 @@ func init() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-	dbHost  = os.Getenv("DB_HOST")
+	dbHost = os.Getenv("DB_HOST")
 	dbPort = os.Getenv("DB_PORT")
 	dbUser = os.Getenv("DB_USER")
 	dbPassword = os.Getenv("DB_PASSWORD")
 	dbName = os.Getenv("DB_NAME")
+	JwtExpirationTime = os.Getenv("JWT_EXPIRATION_TIME")
+	JwtRefreshTime = os.Getenv("JWT_REFRESH_EXPIRATION_TIME_SECONDS")
 }
 
 func ConnectToDatabase() *sql.DB {
@@ -44,5 +45,7 @@ func ConnectToDatabase() *sql.DB {
 		log.Fatal("Failed to ping the database: ", err)
 	}
 	fmt.Println("Database Connected Successfully")
+
+	DB = db
 	return db
 }

@@ -39,20 +39,25 @@ func ReservationCalculation(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid room ID"})
 	}
+
 	snackID, err := strconv.Atoi(c.QueryParam("snack_id"))
 	if err != nil {
 		snackID = 0 // If no snack is provided, set to 0 (no snack)
 	}
+
 	startTime := c.QueryParam("startTime")
 	endTime := c.QueryParam("endTime")
+
 	participant, err := strconv.Atoi(c.QueryParam("participant"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid participant count"})
 	}
+
 	_, err = strconv.Atoi(c.QueryParam("user_id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid user ID"})
 	}
+
 	name := c.QueryParam("name")
 	phoneNumber := c.QueryParam("phoneNumber")
 	company := c.QueryParam("company")
@@ -63,11 +68,14 @@ func ReservationCalculation(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid start time format"})
 	}
+
 	endTimeParsed, err := time.Parse("2006-01-02 15:04:05", endTime)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid end time format"})
 	}
+
 	duration := endTimeParsed.Sub(startTimeParsed).Hours()
+
 	db := configDb.ConnectToDatabase()
 	defer db.Close()
 
@@ -150,9 +158,7 @@ func CreateReservation(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Database error"})
 	}
 
-	var total_invoice float64
-	var roomPrice float64
-	var snackPrice float64
+	var total_invoice, roomPrice, snackPrice float64
 
 	for _, room := range reservation.Rooms {
 		var existingBookingStatus string

@@ -1,14 +1,14 @@
 package uploadController
 
 import (
+	"emeeting/models"
 	"fmt"
 	"github.com/labstack/echo/v4"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
-	"emeeting/models"
 	"strings"
-	"io"
 )
 
 // UploadHandler godoc
@@ -90,6 +90,8 @@ func UploadHandler(c echo.Context) error {
 		})
 	}
 
+	// ini jangan di hardcode
+	// bikin config base url baru
 	imageURL := fmt.Sprintf("http://localhost:8080/temp/%s", filepath.Base(filePath))
 
 	response := models.UploadResponse{

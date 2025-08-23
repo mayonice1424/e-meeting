@@ -4,11 +4,11 @@ import (
 	"emeeting/config"
 	"emeeting/database"
 	"emeeting/middleware"
+	reservation "emeeting/routes/reservation"
+	room "emeeting/routes/room"
 	snack "emeeting/routes/snack"
 	router "emeeting/routes/upload"
 	user "emeeting/routes/user"
-	room "emeeting/routes/room"
-	reservation "emeeting/routes/reservation"
 
 	"fmt"
 	"log"
@@ -39,6 +39,8 @@ func main() {
 	router.RegisterUploadRoutes(e)
 	room.RoomRoutes(e)
 	reservation.ReservationRoutes(e)
+
+	// ini bisa diganti pakek https://github.com/golang-migrate/migrate
 	err := createtable.CreatedUser(db)
 	if err != nil {
 		log.Fatal("Error creating table: ", err)

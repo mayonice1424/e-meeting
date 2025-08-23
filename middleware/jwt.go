@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"emeeting/models"
 	"errors"
 	"fmt"
 	"log"
@@ -13,16 +14,18 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 )
+
 var jwtKey []byte
+
 func init() {
-    err := godotenv.Load()
-    if err != nil {
-        log.Fatal("Error loading .env file")
-    }
-    jwtKey = []byte(os.Getenv("SECRET_KEY"))
-    if len(jwtKey) == 0 {
-        log.Fatal("SECRET_KEY is not set in the environment")
-    }
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+	jwtKey = []byte(os.Getenv("SECRET_KEY"))
+	if len(jwtKey) == 0 {
+		log.Fatal("SECRET_KEY is not set in the environment")
+	}
 }
 
 func ValidateRefreshToken(c echo.Context) error {
@@ -63,14 +66,14 @@ func ValidateRefreshToken(c echo.Context) error {
 	username, ok := claims["username"].(string)
 	if !ok {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"message": "username claim is missing"})
-	}	
+	}
 	userId, ok := claims["userId"].(float64)
-	if !ok {	
+	if !ok {
 
 		return c.JSON(http.StatusUnauthorized, map[string]string{"message": "userId claim is missing"})
-	}	
+	}
 	role, ok := claims["role"].(string)
-	if !ok {	
+	if !ok {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"message": "role claim is missing"})
 	}
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -85,10 +88,9 @@ func ValidateRefreshToken(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "error generating access token: " + err.Error()})
 	}
 	return c.JSON(http.StatusOK, map[string]string{
-		"accessToken":  accessTokenString,
+		"accessToken": accessTokenString,
 	})
 }
-
 
 func ValidateTokenJWT(c echo.Context) (jwt.MapClaims, error) {
 	tokenString := c.Request().Header.Get("Authorization")
@@ -116,14 +118,23 @@ func ValidateTokenJWT(c echo.Context) (jwt.MapClaims, error) {
 	return claims, nil
 }
 
-
 func AuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		claims, err := ValidateTokenJWT(c)
-	if err != nil {
+		if err != nil {
 			return c.JSON(http.StatusUnauthorized, map[string]string{"message": err.Error()})
 		}
 		c.Set("userClaims", claims)
+		return next(c)
+	}
+}
+
+func AuthAdminRoleMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		claims := c.Get("userClaims").(jwt.MapClaims)
+		if claims["role"] != "admin" {
+			return c.JSON(http.StatusUnauthorized, models.ErrorResponse{Message: "Unauthorized access"})
+		}
 		return next(c)
 	}
 }

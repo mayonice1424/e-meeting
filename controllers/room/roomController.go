@@ -137,7 +137,7 @@ func GetRooms(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path int true "Room ID"
-// @Param Authorization header string true "Bearer <JWT Token>" 
+// @Param Authorization header string true "Bearer <JWT Token>"
 // @Success 200 {object} models.SuccessResponseRoom
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 404 {object} models.ErrorResponse
@@ -155,31 +155,31 @@ func DeleteRoom(c echo.Context) error {
 	if _, err := strconv.Atoi(id); err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid Room ID"})
 	}
-var statuses []string
-rows, err := db.Query("SELECT dpr.reservation_status FROM data_booking_room dbr LEFT JOIN data_personal_reservation dpr ON dbr.reservation_id = dpr.id WHERE dbr.id_room = $1", id)
-if err != nil {
-	return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to retrieve room status"})
-}
-defer rows.Close()
-
-for rows.Next() {
-	var status string
-	if err := rows.Scan(&status); err != nil {
-		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to scan status"})
+	var statuses []string
+	rows, err := db.Query("SELECT dpr.reservation_status FROM data_booking_room dbr LEFT JOIN data_personal_reservation dpr ON dbr.reservation_id = dpr.id WHERE dbr.id_room = $1", id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to retrieve room status"})
 	}
-	statuses = append(statuses, status)
-}
-if err := rows.Err(); err != nil {
-	return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error occurred while reading results"})
-}
+	defer rows.Close()
 
-fmt.Println("Statuses:", statuses)
-
-for _, status := range statuses {
-	if status == "Booked" || status == "Paid" {
-		return c.JSON(http.StatusConflict, models.ErrorResponse{Message: "Room is currently booked"})
+	for rows.Next() {
+		var status string
+		if err := rows.Scan(&status); err != nil {
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to scan status"})
+		}
+		statuses = append(statuses, status)
 	}
-}
+	if err := rows.Err(); err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error occurred while reading results"})
+	}
+
+	fmt.Println("Statuses:", statuses)
+
+	for _, status := range statuses {
+		if status == "Booked" || status == "Paid" {
+			return c.JSON(http.StatusConflict, models.ErrorResponse{Message: "Room is currently booked"})
+		}
+	}
 
 	var pictureUrl string
 	err = db.QueryRow("SELECT picture FROM room WHERE id = $1", id).Scan(&pictureUrl)
@@ -188,6 +188,12 @@ for _, status := range statuses {
 			return c.JSON(http.StatusNotFound, models.ErrorResponse{Message: "Room not found"})
 		}
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to retrieve room picture"})
+	}
+
+	query := "DELETE FROM room WHERE id = $1"
+	_, err = db.Exec(query, id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to delete room"})
 	}
 
 	if pictureUrl != "" {
@@ -202,11 +208,6 @@ for _, status := range statuses {
 				return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: fmt.Sprintf("Failed to delete file: %s", fileName)})
 			}
 		}
-	}
-	query := "DELETE FROM room WHERE id = $1"
-	_, err = db.Exec(query, id)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to delete room"})
 	}
 
 	return c.JSON(http.StatusOK, models.SuccessResponseRoom{Message: "Room deleted successfully"})
@@ -252,6 +253,11 @@ for _, status := range statuses {
 // @Failure 400 {object} models.ErrorResponse
 // @Router /api/v1/rooms [post]
 func CreateRoom(c echo.Context) error {
+	//claims := c.Get("userClaims").(jwt.MapClaims)
+	//if claims["role"] != "admin" {
+	//	return c.JSON(http.StatusUnauthorized, models.ErrorResponse{Message: "Unauthorized access"})
+	//}
+
 	fmt.Println("CreateRoom called1")
 	db := configDb.ConnectToDatabase()
 	defer db.Close()
@@ -270,7 +276,6 @@ func CreateRoom(c echo.Context) error {
 	})
 }
 
-
 // UpdateRoom godoc
 // @Summary Endpoint for updating room by id
 // @Description Update room by id with id in the URL path
@@ -286,6 +291,11 @@ func CreateRoom(c echo.Context) error {
 // @Failure 500 {object} models.ErrorResponse
 // @Router /api/v1/rooms/{id} [put]
 func UpdateRoom(c echo.Context) error {
+	//claims := c.Get("userClaims").(jwt.MapClaims)
+	//if claims["role"] != "admin" {
+	//	return c.JSON(http.StatusUnauthorized, models.ErrorResponse{Message: "Unauthorized access"})
+	//}
+
 	db := configDb.ConnectToDatabase()
 	defer db.Close()
 	id := c.Param("id")
@@ -352,7 +362,6 @@ func UpdateRoom(c echo.Context) error {
 	return c.JSON(http.StatusOK, models.SuccessResponseRoom{Message: "Room updated successfully"})
 }
 
-
 func moveFile(sourcePath string, destPath string) error {
 	sourceFile, err := os.Open(sourcePath)
 	if err != nil {
@@ -371,7 +380,7 @@ func moveFile(sourcePath string, destPath string) error {
 		return err
 	}
 
-
+	// tambah remove foto di temp folder
 
 	return nil
 }

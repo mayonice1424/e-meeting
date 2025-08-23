@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -26,14 +27,14 @@ import (
 var jwtKey []byte
 
 func init() {
-    err := godotenv.Load()
-    if err != nil {
-        log.Fatal("Error loading .env file")
-    }
-    jwtKey = []byte(os.Getenv("SECRET_KEY"))
-    if len(jwtKey) == 0 {
-        log.Fatal("SECRET_KEY is not set in the environment")
-    }
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+	jwtKey = []byte(os.Getenv("SECRET_KEY"))
+	if len(jwtKey) == 0 {
+		log.Fatal("SECRET_KEY is not set in the environment")
+	}
 }
 func PasswordValidation(password string) bool {
 	lowercaseRegex := `[a-z]`
@@ -70,8 +71,10 @@ func UserRegister(c echo.Context) error {
 
 	var newUser models.CreateUser
 	var responseUser models.User
-	var data *int
-	data = nil
+
+	// ini perlu dihapus
+	//var data *int
+	//data = nil
 	err := c.Bind(&newUser)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid request payload"})
@@ -82,6 +85,7 @@ func UserRegister(c echo.Context) error {
 	if newUser.Password != newUser.Confirm_Password {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Password and Confirm Password do not match"})
 	}
+	// bisa pakek library go-validator
 	if newUser.Email == "" || newUser.Username == "" || newUser.Password == "" {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Email, Username and Password are required"})
 	}
@@ -104,18 +108,20 @@ func UserRegister(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Username already exists"})
 	}
 
-
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newUser.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error hashing password"})
 	}
-	
+
+	// bisa diganti pakek db.Exec karena tidak butuh last insert id
+	// insert role dengan default valuer "user"
+	// dan status = active
 	err = db.QueryRow(`
 		INSERT INTO users (email, password, username) 
 		VALUES ($1, $2, $3) 
-		RETURNING id`, 
-		newUser.Email, 
-		hashedPassword, 
+		RETURNING id`,
+		newUser.Email,
+		hashedPassword,
 		newUser.Username).Scan(&responseUser.ID)
 	if err != nil {
 		log.Println("Error inserting user:", err)
@@ -128,7 +134,7 @@ func UserRegister(c echo.Context) error {
 	// 	return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error retrieving user details"})
 	// }
 	return c.JSON(http.StatusCreated, models.SuccessResponse{
-		Data:    data,
+		Data:    nil,
 		Message: "User created successfully",
 	})
 }
@@ -166,12 +172,18 @@ func UserLogin(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Login Failed"})
 	}
+
+	// exp jadikan config
+	expirationTimeInt, err := strconv.Atoi(configDb.JwtExpirationTime)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Invalid JWT expiration time configuration"})
+	}
 	accessClaimsMap := jwt.MapClaims{
 		"email":    email,
 		"username": loginUser.Username,
 		"userId":   userId,
-		"role" : role,
-		"exp":      time.Now().Add(24 * time.Hour).Unix(),
+		"role":     role,
+		"exp":      time.Now().Add(time.Duration(expirationTimeInt) * time.Second).Unix(),
 	}
 
 	accessToken, err := generateJWTToken(accessClaimsMap)
@@ -180,12 +192,17 @@ func UserLogin(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error generating access token"})
 	}
 
+	// exp jadikan config
+	expirationRefreshTimeInt, err := strconv.Atoi(configDb.JwtRefreshTime)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Invalid JWT expiration time configuration"})
+	}
 	refreshClaims := jwt.MapClaims{
-		"email":    email,       
+		"email":    email,
 		"username": loginUser.Username,
 		"userId":   userId,
-		"role" : role,
-		"exp":      time.Now().Add(30 * 24 * time.Hour).Unix(), 
+		"role":     role,
+		"exp":      time.Now().Add(time.Duration(expirationRefreshTimeInt) * time.Second).Unix(),
 	}
 
 	refreshToken, err := generateJWTToken(refreshClaims)
@@ -225,7 +242,7 @@ func generateJWTToken(claims jwt.MapClaims) (string, error) {
 // @Router /password/reset [post]
 func RequestResetPassword(c echo.Context) error {
 	var email models.EmailResetPassword
-	err:=c.Bind(&email)
+	err := c.Bind(&email)
 	if err != nil {
 		return c.JSON(http.StatusForbidden, models.ErrorResponse{Message: "Email not found"})
 	}
@@ -240,7 +257,7 @@ func RequestResetPassword(c echo.Context) error {
 	}
 	tokenData := models.TokenResetPassword{Token: token}
 	return c.JSON(http.StatusOK, models.SuccessResponseResetPassword{
-		Data:    tokenData,
+		Data: tokenData,
 	})
 }
 
@@ -251,7 +268,7 @@ func RequestResetPassword(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path int true "User ID" // Add this for the ID in the URL path
-// @Param Authorization header string true "Bearer <JWT Token>" 
+// @Param Authorization header string true "Bearer <JWT Token>"
 // @Param user body models.ResetPasswordById true "User reset password object"
 // @Success 200 {object} models.SuccessResponseResetPassword
 // @Failure 400 {object} models.ErrorResponse
@@ -260,7 +277,7 @@ func RequestResetPassword(c echo.Context) error {
 func ResetPassword(c echo.Context) error {
 	userId := c.Param("id")
 	if userId == "" {
-			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "User ID is required"})
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "User ID is required"})
 	}
 	authHeader := c.Request().Header.Get("Authorization")
 	if authHeader == "" {
@@ -274,7 +291,7 @@ func ResetPassword(c echo.Context) error {
 	if !PasswordValidation(passwordPayload.NewPassword) {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Password must contain at least one lowercase letter, one uppercase letter, one digit, and one special character"})
 	}
-	if passwordPayload.NewPassword != passwordPayload.ConfirmPassword{
+	if passwordPayload.NewPassword != passwordPayload.ConfirmPassword {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Password and Confirm Password do not match"})
 	}
 	valid, userID, err := utils.VerifyResetToken(authHeader)
@@ -288,7 +305,6 @@ func ResetPassword(c echo.Context) error {
 	return c.JSON(http.StatusOK, "Password successfully reset")
 }
 
-
 // UserById godoc
 // @Summary Endpoint for user by id
 // @Description User by id with id in the URL path
@@ -296,17 +312,26 @@ func ResetPassword(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path int true "User ID"
-// @Param Authorization header string true "Bearer <JWT Token>" 
+// @Param Authorization header string true "Bearer <JWT Token>"
 // @Success 200 {object} models.SuccessResponseUser
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 401 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
 // @Router /api/v1/users/{id} [get]
 func UserById(c echo.Context) error {
-	db := configDb.ConnectToDatabase()
-	defer db.Close()
-	idParam  := c.Param("id")
+	defer configDb.DB.Close()
+	idParam := c.Param("id")
+
+	// jangan lupa error handling
 	urlID, err := strconv.Atoi(idParam)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid user ID"})
+	}
+
+	if urlID == 0 {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "User ID is required"})
+	}
+
 	claims, ok := c.Get("userClaims").(jwt.MapClaims)
 	if !ok {
 		return c.JSON(http.StatusUnauthorized, models.ErrorResponse{Message: "user not found"})
@@ -315,6 +340,7 @@ func UserById(c echo.Context) error {
 	fmt.Println("User ID from params:", urlID)
 
 	userIdClaim, ok := claims["userId"]
+	fmt.Println("userIdClaim.(type)", reflect.TypeOf(userIdClaim))
 	if !ok {
 		return c.JSON(http.StatusUnauthorized, models.ErrorResponse{Message: "User ID not found in token"})
 	}
@@ -323,25 +349,23 @@ func UserById(c echo.Context) error {
 	switch v := userIdClaim.(type) {
 	case float64:
 		userIdFromToken = int(v)
-	case string:
-		idParsed, err := strconv.Atoi(v)
-		if err != nil {
-			return c.JSON(http.StatusUnauthorized, models.ErrorResponse{Message: "unauthorized"})
-		}
-		userIdFromToken = idParsed
+	//case string:
+	//	idParsed, err := strconv.Atoi(v)
+	//	if err != nil {
+	//		return c.JSON(http.StatusUnauthorized, models.ErrorResponse{Message: "unauthorized"})
+	//	}
+	//	userIdFromToken = idParsed
 	default:
 		return c.JSON(http.StatusUnauthorized, models.ErrorResponse{Message: "unauthorized"})
 	}
 
 	if userIdFromToken != urlID {
-		return c.JSON(http.StatusForbidden, models.ErrorResponse{Message: "unauthorized"})
+		return c.JSON(http.StatusUnauthorized, models.ErrorResponse{Message: "unauthorized"})
 	}
-	if urlID == 0 {
-		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "User ID is required"})
-	}
+
 	var user models.User
 	query := "SELECT id, name, email, username, no_hp, role, status, language, profile_picture, created_at, updated_at FROM users WHERE id = $1"
-	err = db.QueryRow(query, urlID).Scan(&user.ID, &user.Name, &user.Email, &user.Username, &user.No_HP, &user.Role, &user.Status, &user.Language, &user.Profile_Picture, &user.Created_At, &user.Updated_At)
+	err = configDb.DB.QueryRow(query, urlID).Scan(&user.ID, &user.Name, &user.Email, &user.Username, &user.No_HP, &user.Role, &user.Status, &user.Language, &user.Profile_Picture, &user.Created_At, &user.Updated_At)
 	if err != nil {
 		fmt.Println("Error fetching user details:", err)
 		if errors.Is(err, sql.ErrNoRows) {
@@ -377,6 +401,7 @@ func UserUpdate(c echo.Context) error {
 	}
 
 	userID := c.Param("id")
+
 	updateFields := []string{}
 	updateValues := []interface{}{}
 	paramCount := 1
