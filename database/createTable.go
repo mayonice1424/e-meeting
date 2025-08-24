@@ -39,8 +39,8 @@ func CreatedUser(db *sql.DB) error {
     username VARCHAR(100) NOT NULL,
     password VARCHAR(100) NOT NULL,
     no_hp VARCHAR(20) DEFAULT '',  -- Kolom ini boleh NULL dan diberi string kosong default
-    role VARCHAR(20) DEFAULT '',  -- Kolom ini boleh NULL dan diberi string kosong default
-    status VARCHAR(20) DEFAULT 'In-Active',
+    role VARCHAR(20) DEFAULT 'User',  -- Kolom ini boleh NULL dan diberi string kosong default
+    status VARCHAR(20) DEFAULT 'Active',
     language VARCHAR(50) DEFAULT '',
     profile_picture VARCHAR(100) DEFAULT '',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,

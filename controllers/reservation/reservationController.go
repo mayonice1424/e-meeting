@@ -81,8 +81,8 @@ func ReservationCalculation(c echo.Context) error {
 	var snack models.SnackCategory
 	var subTotalSnack float64
 	if snackID != 0 {
-		querySnack := "SELECT id, name, price FROM snack_category WHERE id = $1"
-		err = db.QueryRow(querySnack, snackID).Scan(&snack.ID, &snack.Name, &snack.Price)
+		querySnack := "SELECT id, name, price, unit, category FROM snack_category WHERE id = $1"
+		err = db.QueryRow(querySnack, snackID).Scan(&snack.ID, &snack.Name, &snack.Price, &snack.Unit, &snack.Category)
 		if err != nil {
 			return c.JSON(http.StatusNotFound, models.ErrorResponse{Message: "Snack not found"})
 		}
@@ -153,8 +153,15 @@ func CreateReservation(c echo.Context) error {
 	var total_invoice float64
 	var roomPrice float64
 	var snackPrice float64
-
+	roomIDMap := make(map[int]bool)
 	for _, room := range reservation.Rooms {
+		if roomIDMap[room.ID] {
+			tx.Rollback()
+			return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+				Message: fmt.Sprintf("Room ID %d is duplicated in the request", room.ID),
+			})
+		}
+		roomIDMap[room.ID] = true
 		var existingBookingStatus string
 		roomBookingQuery := `
 		SELECT r.reservation_status 
@@ -309,4 +316,131 @@ func UpdateReservationStatus(c echo.Context) error {
 	return c.JSON(http.StatusOK, models.SuccessResponseUpdateReservationStatus{
 		Message: "Update status successfully",
 	})
+}
+
+
+// GetReservationById godoc
+// @Summary Get reservation by ID
+// @Description Get the details of a reservation by its ID
+// @Tags reservation
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "Bearer <JWT Token>"
+// @Param id path int true "Reservation ID"
+// @Success 200 {object} models.ReservationCalculationReservation
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /api/v1/reservation/{id} [get]
+func GetReservationById(c echo.Context) error {
+	reservationID := c.Param("id")
+	if reservationID == "" {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Reservation ID is required"})
+	}
+
+	db := configDb.ConnectToDatabase()
+	defer db.Close()
+
+	var reservation models.PersonalReservation
+	reservationQuery := `
+		SELECT dpr.name, dpr.no_hp, dpr.company_name, dpr.reservation_status, dpr.note, dpr.total_invoice, dbr.duration, dbr.start_date, dbr.end_date, dbr.total_participant
+		FROM data_personal_reservation dpr left join data_booking_room dbr on dpr.id = dbr.reservation_id
+		WHERE dpr.id = $1
+	`
+	err := db.QueryRow(reservationQuery, reservationID).Scan(
+		&reservation.Name, &reservation.PhoneNumber, &reservation.Company, &reservation.ReservationStatus, &reservation.Notes, &reservation.TotalInvoice, &reservation.Duration, &reservation.StartTime, &reservation.EndTime, &reservation.Participant,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.JSON(http.StatusNotFound, models.ErrorResponse{Message: "Reservation not found"})
+		}
+		fmt.Println("Error fetching reservation data:", err)
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error fetching reservation data"})
+	}
+
+	var rooms []models.RoomCalculationReservation
+	roomQuery := `
+		SELECT r.name, r.price_per_hour, r.picture, r.capacity, r.type, b.start_date, b.end_date, b.total_participant, b.snack_id
+		FROM data_booking_room b
+		JOIN room r ON b.id_room = r.id
+		WHERE b.reservation_id = $1
+	`
+	rows, err := db.Query(roomQuery, reservationID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error fetching room data"})
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var room models.RoomCalculationReservation
+		var snackID int
+		err := rows.Scan(
+			&room.Name, &room.PricePerHour, &room.ImageURL, &room.Capacity, &room.Type, &room.StartTime, &room.EndTime, &room.Participant, &snackID,
+		)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error reading room data"})
+		}
+
+		var snack models.SnackCategory
+		if snackID != 0 {
+			snackQuery := `
+				SELECT id, name, price, unit, category
+				FROM snack_category
+				WHERE id = $1
+			`
+			err = db.QueryRow(snackQuery, snackID).Scan(&snack.ID, &snack.Name, &snack.Price, &snack.Unit, &snack.Category)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error fetching snack data"})
+			}
+		}
+
+		duration := room.EndTime.Sub(room.StartTime).Hours()
+		subTotalRoom := room.PricePerHour * duration
+		subTotalSnack := float64(room.Participant) * snack.Price
+
+		room.SubTotalRoom = subTotalRoom
+		room.SubTotalSnack = subTotalSnack
+		room.Snack = snack
+
+		rooms = append(rooms, room)
+	}
+
+	var total float64
+	for _, room := range rooms {
+		total += room.SubTotalRoom + room.SubTotalSnack
+	}
+
+	var roomCalcs []models.RoomCalculation
+	for _, rr := range rooms {
+		roomCalcs = append(roomCalcs, models.RoomCalculation{
+			Name:          rr.Name,
+			PricePerHour:  rr.PricePerHour,
+			ImageURL:      rr.ImageURL,
+			Capacity:      rr.Capacity,
+			Type:          rr.Type,
+			SubTotalRoom:  rr.SubTotalRoom,
+			SubTotalSnack: rr.SubTotalSnack,
+			Snack:         rr.Snack,
+		})
+	}
+
+	response := models.SuccessResponseReservationCalculation{
+		Message: "Reservation data fetched successfully",
+		Data: models.ReservationCalculationData{
+			Rooms: roomCalcs,
+			PersonalData: models.PersonalData{
+				Name:        reservation.Name,
+				PhoneNumber: reservation.PhoneNumber,
+				Company:     reservation.Company,
+				StartTime:   reservation.StartTime,
+				EndTime:     reservation.EndTime,
+				Duration:    int(reservation.Duration),
+				Participant: reservation.Participant,
+			},
+			Total: total,
+		},
+	}
+
+	return c.JSON(http.StatusOK, response)
 }

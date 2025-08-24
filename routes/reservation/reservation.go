@@ -13,5 +13,6 @@ func ReservationRoutes(e *echo.Echo) {
 	group.GET("/reservation/calculation", reservationController.ReservationCalculation)
 	group.POST("/reservation", reservationController.CreateReservation)
 	group.PUT("/reservation/status/:id", reservationController.UpdateReservationStatus)
+	group.GET("/reservation/:id", reservationController.GetReservationById)
 	// group.POST("/reservations", reservationController.)
 }

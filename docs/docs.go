@@ -246,6 +246,63 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/reservation/{id}": {
+            "get": {
+                "description": "Get the details of a reservation by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reservation"
+                ],
+                "summary": "Get reservation by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer \u003cJWT Token\u003e",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Reservation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.ReservationCalculationReservation"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/rooms": {
             "get": {
                 "description": "Get all rooms with pagination, name, type, picture, price_per_hour, and capacity",
@@ -1028,6 +1085,24 @@ const docTemplate = `{
                 }
             }
         },
+        "models.ReservationCalculationReservation": {
+            "type": "object",
+            "properties": {
+                "personalData": {
+                    "$ref": "#/definitions/models.PersonalData"
+                },
+                "rooms": {
+                    "description": "Ubah ke RoomCalculationReservation",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.RoomCalculationReservation"
+                    }
+                },
+                "total": {
+                    "type": "number"
+                }
+            }
+        },
         "models.ReservationRequest": {
             "type": "object",
             "properties": {
@@ -1082,6 +1157,48 @@ const docTemplate = `{
                 },
                 "snack": {
                     "$ref": "#/definitions/models.SnackCategory"
+                },
+                "subTotalRoom": {
+                    "type": "number"
+                },
+                "subTotalSnack": {
+                    "type": "number"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.RoomCalculationReservation": {
+            "type": "object",
+            "properties": {
+                "capacity": {
+                    "type": "integer"
+                },
+                "duration": {
+                    "description": "Duration in hours",
+                    "type": "integer"
+                },
+                "endTime": {
+                    "type": "string"
+                },
+                "imageURL": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "participant": {
+                    "type": "integer"
+                },
+                "pricePerHour": {
+                    "type": "number"
+                },
+                "snack": {
+                    "$ref": "#/definitions/models.SnackCategory"
+                },
+                "startTime": {
+                    "type": "string"
                 },
                 "subTotalRoom": {
                     "type": "number"
@@ -1282,6 +1399,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "language": {
+                    "type": "string"
+                },
+                "name": {
                     "type": "string"
                 },
                 "password": {

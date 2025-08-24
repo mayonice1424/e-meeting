@@ -190,7 +190,13 @@ for _, status := range statuses {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to retrieve room picture"})
 	}
 
-	if pictureUrl != "" {
+
+	query := "DELETE FROM room WHERE id = $1"
+	_, err = db.Exec(query, id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to delete room"})
+	}
+		if pictureUrl != "" {
 		parts := strings.Split(pictureUrl, "/uploads/")
 		if len(parts) == 2 {
 			fileName := parts[1]
@@ -202,11 +208,6 @@ for _, status := range statuses {
 				return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: fmt.Sprintf("Failed to delete file: %s", fileName)})
 			}
 		}
-	}
-	query := "DELETE FROM room WHERE id = $1"
-	_, err = db.Exec(query, id)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to delete room"})
 	}
 
 	return c.JSON(http.StatusOK, models.SuccessResponseRoom{Message: "Room deleted successfully"})
@@ -370,8 +371,6 @@ func moveFile(sourcePath string, destPath string) error {
 	if err != nil {
 		return err
 	}
-
-
 
 	return nil
 }

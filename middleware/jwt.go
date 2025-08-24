@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+
 	// "strings"
+	"emeeting/models"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -124,6 +126,16 @@ func AuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			return c.JSON(http.StatusUnauthorized, map[string]string{"message": err.Error()})
 		}
 		c.Set("userClaims", claims)
+		return next(c)
+	}
+}
+
+func AuthAdminRoleMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		claims := c.Get("userClaims").(jwt.MapClaims)
+		if claims["role"] != "Admin" {
+			return c.JSON(http.StatusUnauthorized, models.ErrorResponse{Message: "Unauthorized access"})
+		}
 		return next(c)
 	}
 }

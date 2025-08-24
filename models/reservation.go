@@ -7,6 +7,22 @@ type SuccessResponseReservationCalculation struct {
 	Message string                         `json:"message"`
 	Data    ReservationCalculationData     `json:"data"`
 }
+
+type PersonalReservation struct {
+    ID                  int       `json:"id"`
+    Name                string    `json:"name"`
+    PhoneNumber         string    `json:"phoneNumber"`
+    Company             string    `json:"company"`
+    ReservationStatus   string    `json:"reservationStatus"`
+    Notes               string    `json:"notes"`
+    TotalInvoice        float64   `json:"totalInvoice"`
+    StartTime           time.Time `json:"start_time"`
+    EndTime             time.Time `json:"end_time"`
+    Duration            int       `json:"duration"`  // Durasi dalam jam
+    Participant         int       `json:"participant"`
+}
+
+
 // ReservationCalculationData represents the calculated reservation data
 type ReservationCalculationData struct {
 	Rooms         []RoomCalculation `json:"rooms"`
@@ -26,6 +42,20 @@ type RoomCalculation struct {
 	Snack         SnackCategory `json:"snack"`
 }
 
+type RoomCalculationReservation struct {
+    Name          string    `json:"name"`
+    PricePerHour  float64   `json:"pricePerHour"`
+    ImageURL      string    `json:"imageURL"`
+    Capacity      int       `json:"capacity"`
+    Type          string    `json:"type"`
+    SubTotalSnack float64   `json:"subTotalSnack"`
+    SubTotalRoom  float64   `json:"subTotalRoom"`
+    Snack         SnackCategory `json:"snack"`
+    StartTime     time.Time `json:"start_time"`
+    EndTime       time.Time `json:"end_time"`
+    Duration      int       `json:"duration"`   
+    Participant   int       `json:"participant"`
+}
 // PersonalData represents the personal details of the reservation
 type PersonalData struct {
 	Name        string    `json:"name"`
@@ -72,4 +102,10 @@ type UpdateReservationStatusRequest struct {
 
 type SuccessResponseUpdateReservationStatus struct {
 	Message string `json:"message"`	
+}
+
+type ReservationCalculationReservation struct {
+	Rooms         []RoomCalculationReservation `json:"rooms"`  // Ubah ke RoomCalculationReservation
+	PersonalData  PersonalData                 `json:"personalData"`
+	Total         float64                      `json:"total"`
 }

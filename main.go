@@ -14,7 +14,7 @@ import (
 	"log"
 
 	_ "emeeting/docs"
-
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/labstack/echo/v4"
 	echoSwagger "github.com/swaggo/echo-swagger"
 )
@@ -23,6 +23,11 @@ func main() {
 	e := echo.New()
 	db := configDb.ConnectToDatabase()
 	defer db.Close()
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"*"}, 
+		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE, echo.OPTIONS},
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+	}))
 	e.Static("/temp", "./temp")
 	e.Static("/uploads", "./uploads")
 	e.GET("/swagger/*", echoSwagger.WrapHandler)

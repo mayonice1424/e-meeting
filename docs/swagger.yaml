@@ -68,6 +68,18 @@ definitions:
       total:
         type: number
     type: object
+  models.ReservationCalculationReservation:
+    properties:
+      personalData:
+        $ref: '#/definitions/models.PersonalData'
+      rooms:
+        description: Ubah ke RoomCalculationReservation
+        items:
+          $ref: '#/definitions/models.RoomCalculationReservation'
+        type: array
+      total:
+        type: number
+    type: object
   models.ReservationRequest:
     properties:
       company:
@@ -104,6 +116,34 @@ definitions:
         type: number
       snack:
         $ref: '#/definitions/models.SnackCategory'
+      subTotalRoom:
+        type: number
+      subTotalSnack:
+        type: number
+      type:
+        type: string
+    type: object
+  models.RoomCalculationReservation:
+    properties:
+      capacity:
+        type: integer
+      duration:
+        description: Duration in hours
+        type: integer
+      endTime:
+        type: string
+      imageURL:
+        type: string
+      name:
+        type: string
+      participant:
+        type: integer
+      pricePerHour:
+        type: number
+      snack:
+        $ref: '#/definitions/models.SnackCategory'
+      startTime:
+        type: string
       subTotalRoom:
         type: number
       subTotalSnack:
@@ -233,6 +273,8 @@ definitions:
         type: string
       language:
         type: string
+      name:
+        type: string
       password:
         type: string
       profile_picture:
@@ -315,6 +357,44 @@ paths:
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Create a new reservation
+      tags:
+      - reservation
+  /api/v1/reservation/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get the details of a reservation by its ID
+      parameters:
+      - description: Bearer <JWT Token>
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Reservation ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ReservationCalculationReservation'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get reservation by ID
       tags:
       - reservation
   /api/v1/reservation/calculation:

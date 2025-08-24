@@ -24,6 +24,7 @@ import (
 )
 
 var jwtKey []byte
+var baseUrl string
 
 func init() {
     err := godotenv.Load()
@@ -34,6 +35,10 @@ func init() {
     if len(jwtKey) == 0 {
         log.Fatal("SECRET_KEY is not set in the environment")
     }
+		baseUrl = os.Getenv("BASE_URL")
+		if baseUrl == "" {
+			log.Fatal("BASE_URL is not set in the environment")
+		}
 }
 func PasswordValidation(password string) bool {
 	lowercaseRegex := `[a-z]`
@@ -381,7 +386,11 @@ func UserUpdate(c echo.Context) error {
 	updateValues := []interface{}{}
 	paramCount := 1
 
-	// Menambahkan field yang ingin diupdate
+	if user.Name != "" {
+		updateFields = append(updateFields, fmt.Sprintf("name = $%d", paramCount))
+		updateValues = append(updateValues, user.Name)
+		paramCount++
+	}
 	if user.Email != "" {
 		updateFields = append(updateFields, fmt.Sprintf("email = $%d", paramCount))
 		updateValues = append(updateValues, user.Email)
@@ -397,10 +406,10 @@ func UserUpdate(c echo.Context) error {
 		updateValues = append(updateValues, user.Language)
 		paramCount++
 	}
-
-	if user.ImageURL != "" {
-		if strings.Contains(user.ImageURL, "/temp/") {
-			fileName := filepath.Base(user.ImageURL)
+	if user.Profile_Picture != "" {
+		if strings.Contains(user.Profile_Picture, "/temp/") {
+			fileName := filepath.Base(user.Profile_Picture)
+			fmt.Println(fileName)
 			sourcePath := filepath.Join("./temp", fileName)
 			destPath := filepath.Join("./uploads", fileName)
 			sourcePath = filepath.ToSlash(sourcePath)
@@ -409,15 +418,15 @@ func UserUpdate(c echo.Context) error {
 			fmt.Println("Destination Path:", destPath)
 			err := moveFile(sourcePath, destPath)
 			if err != nil {
-				return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Error moving file"})
+				log.Println("Error moving file:", err)
+				return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error moving file"})
 			}
 
-			user.ImageURL = fmt.Sprintf("http://localhost:8080/uploads/%s", fileName)
+			user.Profile_Picture = fmt.Sprintf("%s/uploads/%s", baseUrl, fileName)
 		}
-
-		updateFields = append(updateFields, fmt.Sprintf("profile_picture = $%d", paramCount))
-		updateValues = append(updateValues, user.ImageURL)
-		paramCount++
+	updateFields = append(updateFields, fmt.Sprintf("profile_picture = $%d", paramCount))
+	updateValues = append(updateValues, user.Profile_Picture) 
+	paramCount++
 	}
 
 	if user.Status != "" {
@@ -449,7 +458,6 @@ func UserUpdate(c echo.Context) error {
 
 	updateFields = append(updateFields, fmt.Sprintf("updated_at = CURRENT_TIMESTAMP"))
 
-	// Query untuk update data user
 	query := fmt.Sprintf("UPDATE users SET %s WHERE id = $%d RETURNING id, name, email, username, no_hp, role, status, language, profile_picture, created_at, updated_at",
 		strings.Join(updateFields, ", "), paramCount)
 
@@ -472,28 +480,38 @@ func UserUpdate(c echo.Context) error {
 	})
 }
 
-func moveFile(sourcePath string, destPath string) error {
-	sourceFile, err := os.Open(sourcePath)
-	if err != nil {
-		return err
-	}
-	defer sourceFile.Close()
+func moveFile(sourcePath, destPath string) error {
+    if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
+        return fmt.Errorf("create dest dir: %w", err)
+    }
 
-	destFile, err := os.Create(destPath)
-	if err != nil {
-		return err
-	}
-	defer destFile.Close()
+    if err := os.Rename(sourcePath, destPath); err == nil {
+        return nil
+    }
 
-	_, err = io.Copy(destFile, sourceFile)
-	if err != nil {
-		return err
-	}
+    src, err := os.Open(sourcePath)
+    if err != nil {
+        return fmt.Errorf("open source: %w", err)
+    }
+    defer src.Close()
 
-	// err = os.Remove(sourcePath)
-	// if err != nil {
-	// 	return err
-	// }
+    dst, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+    if err != nil {
+        return fmt.Errorf("create dest: %w", err)
+    }
+    defer dst.Close()
 
-	return nil
+    if _, err := io.Copy(dst, src); err != nil {
+        return fmt.Errorf("copy: %w", err)
+    }
+
+    var rmErr error
+    for i := 0; i < 5; i++ {
+        rmErr = os.Remove(sourcePath)
+        if rmErr == nil {
+            return nil
+        }
+        time.Sleep(200 * time.Millisecond) 
+    }
+    return fmt.Errorf("remove source: %w", rmErr)
 }

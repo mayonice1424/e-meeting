@@ -23,7 +23,8 @@ type CreateUser struct {
 
 type UpdateUser struct {
 	Email 					string `json:"email"`	
-	ImageURL 				string `json:"profile_picture"`
+	Profile_Picture 		string `json:"profile_picture"`
+	Name 					  string `json:"name"`
 	Language 				string `json:"language"`
 	Role 						string `json:"role"`
 	Status 					string `json:"status"`
