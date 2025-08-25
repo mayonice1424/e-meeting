@@ -23,6 +23,21 @@ definitions:
       username:
         type: string
     type: object
+  models.DashboardData:
+    properties:
+      rooms:
+        items:
+          $ref: '#/definitions/models.RoomDashboard'
+        type: array
+      totalOmzet:
+        type: number
+      totalReservation:
+        type: integer
+      totalRoom:
+        type: integer
+      totalVisitor:
+        type: integer
+    type: object
   models.EmailResetPassword:
     properties:
       email:
@@ -101,19 +116,15 @@ definitions:
     properties:
       companyName:
         type: string
-      endTime:
-        type: string
       id:
         type: integer
       roomName:
         type: string
       schedule:
-        description: Nested
+        description: Nested schedules array
         items:
-          $ref: '#/definitions/models.ReservationSchedule'
+          $ref: '#/definitions/models.ScheduleDetail'
         type: array
-      startTime:
-        type: string
     type: object
   models.ResetPasswordById:
     properties:
@@ -168,6 +179,17 @@ definitions:
       type:
         type: string
     type: object
+  models.RoomDashboard:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      omzet:
+        type: number
+      percentageOfUsage:
+        type: number
+    type: object
   models.RoomRequest:
     properties:
       endTime:
@@ -182,6 +204,15 @@ definitions:
         type: string
     type: object
   models.RoomsReservationSchedule:
+    properties:
+      endTime:
+        type: string
+      startTime:
+        type: string
+      status:
+        type: string
+    type: object
+  models.ScheduleDetail:
     properties:
       endTime:
         type: string
@@ -228,6 +259,13 @@ definitions:
       message:
         type: string
     type: object
+  models.SuccessResponseDashboard:
+    properties:
+      data:
+        $ref: '#/definitions/models.DashboardData'
+      message:
+        type: string
+    type: object
   models.SuccessResponseLogin:
     properties:
       data:
@@ -244,16 +282,16 @@ definitions:
     type: object
   models.SuccessResponseReservationSchedule:
     properties:
-      data:
-        items:
-          $ref: '#/definitions/models.ReservationSchedule'
-        type: array
       message:
         type: string
       page:
         type: integer
       pageSize:
         type: integer
+      reservations:
+        items:
+          $ref: '#/definitions/models.ReservationSchedule'
+        type: array
       totalData:
         type: integer
       totalPage:
@@ -378,6 +416,54 @@ definitions:
 info:
   contact: {}
 paths:
+  /api/v1/dashboard:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve dashboard data including total rooms, total visitors,
+        total reservations, and total omzet within a specified date range.
+      parameters:
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: startDate
+        required: true
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: endDate
+        required: true
+        type: string
+      - description: Bearer <JWT Token>
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SuccessResponseDashboard'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get dashboard data for reservations
+      tags:
+      - dashboard
   /api/v1/reservation:
     post:
       consumes:

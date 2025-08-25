@@ -110,37 +110,56 @@ type ReservationCalculationReservation struct {
 	Total         float64                      `json:"total"`
 }
 type ReservationSchedule struct {
-	ID 	  int    `json:"id"`
-	RoomName string `json:"roomName"`
-	CompanyName string `json:"companyName"`
-	Schedule []ScheduleDetail `json:"schedule"` // Nested
+	ID          int                `json:"id"`
+	RoomName    string             `json:"roomName"`
+	CompanyName string             `json:"companyName"`
+	Schedules   []ScheduleDetail   `json:"schedule"` // Nested schedules array
 }
 
 type ScheduleDetail struct {
 	StartTime string `json:"startTime"`
 	EndTime   string `json:"endTime"`
-	Status string `json:"status"`
+	Status    string `json:"status"` 
 }
 
-type SuccessResponseReservationSchedule struct {	
-	Message string `json:"message"`
-	Data    []ReservationSchedule `json:"reservations"`
-	TotalData int `json:"totalData"`
-	Page int `json:"page"`
-	PageSize int `json:"pageSize"`
-	TotalPage int `json:"totalPage"`
+type SuccessResponseReservationSchedule struct {
+	Message   string                 `json:"message"`
+	Reservations []ReservationSchedule `json:"reservations"`
+	TotalData int                    `json:"totalData"`
+	Page      int                    `json:"page"`
+	PageSize  int                    `json:"pageSize"`
+	TotalPage int                    `json:"totalPage"`
 }
 
 type RoomsReservationSchedule struct {
 	StartTime string `json:"startTime"`
 	EndTime   string `json:"endTime"`
-	Status   string `json:"status"`
+	Status    string `json:"status"` 
 }
 
 type SuccessResponseRoomsReservationSchedule struct {
-	RoomName string `json:"roomName"`
-	Schedule []RoomsReservationSchedule `json:"schedule"`
-	TotalBooked int `json:"totalBooked"`
+	RoomName    string                 `json:"roomName"`
+	Schedule    []RoomsReservationSchedule `json:"schedule"`
+	TotalBooked int                    `json:"totalBooked"`
 }
 
+type RoomDashboard struct {
+	ID                   int     `json:"id"`
+	Name                 string  `json:"name"`
+	Omzet                float64 `json:"omzet"`
+	PercentageOfUsage    float64 `json:"percentageOfUsage"`
+}
+
+type DashboardData struct {
+	TotalRoom      int             `json:"totalRoom"`
+	TotalVisitor   int             `json:"totalVisitor"`
+	TotalReservation int           `json:"totalReservation"`
+	TotalOmzet      float64        `json:"totalOmzet"`
+	Rooms           []RoomDashboard `json:"rooms"`
+}
+
+type SuccessResponseDashboard struct {
+	Message string       `json:"message"`
+	Data    DashboardData `json:"data"`
+}
 

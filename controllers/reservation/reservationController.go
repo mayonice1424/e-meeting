@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"math"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -337,63 +338,103 @@ func GetReservationSchedule(c echo.Context) error {
 	endDateStr := c.QueryParam("end_date")
 	pageStr := c.QueryParam("page")
 
-	startDate, err := time.Parse("2025-08-20", startDateStr)
-	endDate, err := time.Parse("2025-08-20", endDateStr)
-	page, _ := strconv.Atoi(pageStr)
+	layout := "2006-01-02"
+	startDate, err := time.Parse(layout, startDateStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid start_date format, expected YYYY-MM-DD"})
+	}
+	endDate, err := time.Parse(layout, endDateStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid end_date format, expected YYYY-MM-DD"})
+	}
+
+	page := 1
+	if pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
 	pageSize := 10
 	offset := (page - 1) * pageSize
 
 	db := configDb.ConnectToDatabase()
 	defer db.Close()
 
-	var TotalData int
-	countQuery := `SELECT COUNT(DISTINCT r.id) 
-				   FROM data_personal_reservation r 
-				   JOIN data_booking_room s ON r.id = s.reservation_id 
-				   WHERE s.start_time::date >= $1 AND s.end_time::date <= $2`
-	err = db.QueryRow(countQuery, startDate, endDate).Scan(&TotalData)
+	var totalData int
+	countQuery := `
+		SELECT COUNT(r.id) 
+		FROM data_personal_reservation r
+		LEFT JOIN data_booking_room s ON r.id = s.reservation_id
+		WHERE s.start_date::date >= $1 AND s.end_date::date <= $2
+	`
+	err = db.QueryRow(countQuery, startDate, endDate).Scan(&totalData)
 	if err != nil {
-		fmt.Println("Error counting reservations:", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal server error"})
 	}
 
 	query := `
-		SELECT r.id, m.name, r.company_name, s.start_time, s.end_time
+		SELECT r.id, m.name, r.company_name, s.start_date, s.end_date, r.reservation_status
 		FROM data_personal_reservation r
 		LEFT JOIN data_booking_room s ON r.id = s.reservation_id
 		LEFT JOIN room m ON m.id = s.id_room
-		WHERE s.start_time::date >= $1 AND s.end_time::date <= $2
+		WHERE s.start_date::date >= $1 AND s.end_date::date <= $2
 		ORDER BY s.start_date
 		LIMIT $3 OFFSET $4
 	`
 	rows, err := db.Query(query, startDate, endDate, pageSize, offset)
 	if err != nil {
-		fmt.Println("Error querying reservations:", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal server error"})
 	}
 	defer rows.Close()
 
 	var schedules []models.ReservationSchedule
-	var ScheduleDetails []models.ScheduleDetail
 	for rows.Next() {
 		var schedule models.ReservationSchedule
-		var ScheduleDetail models.ScheduleDetail
-		err := rows.Scan(&schedule.ID, &schedule.RoomName, &schedule.CompanyName, &ScheduleDetail.StartTime, &ScheduleDetail.EndTime, &ScheduleDetail.Status)
+		var scheduleDetail models.ScheduleDetail
+		err := rows.Scan(&schedule.ID, &schedule.RoomName, &schedule.CompanyName, &scheduleDetail.StartTime, &scheduleDetail.EndTime, &scheduleDetail.Status)
 		if err != nil {
-			fmt.Println("Error scanning reservation:", err)
-			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal server error"})
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error scanning reservation"})
 		}
+
+		var startParsed, endParsed time.Time
+		startParsed, err = time.Parse("2006-01-02 15:04:05", scheduleDetail.StartTime)
+		if err != nil {
+			startParsed, err = time.Parse(time.RFC3339, scheduleDetail.StartTime)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error parsing reservation start time"})
+			}
+		}
+		endParsed, err = time.Parse("2006-01-02 15:04:05", scheduleDetail.EndTime)
+		if err != nil {
+			endParsed, err = time.Parse(time.RFC3339, scheduleDetail.EndTime)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error parsing reservation end time"})
+			}
+		}
+
+		if endParsed.Before(time.Now()) {
+			scheduleDetail.Status = "Done"
+		} else if startParsed.Before(time.Now()) && endParsed.After(time.Now()) {
+			scheduleDetail.Status = "In Progress"
+		} else {
+			scheduleDetail.Status = "Up Coming"
+		}
+
+		schedule.Schedules = append(schedule.Schedules, scheduleDetail)
 		schedules = append(schedules, schedule)
 	}
-	return c.JSON(http.StatusOK, models.SuccessResponseReservationSchedule{
+
+	response := models.SuccessResponseReservationSchedule{
 		Message:   "Reservation schedule fetched successfully",
-		Data:      schedules,
-		TotalData: TotalData,
+		Reservations: schedules,
 		Page:      page,
 		PageSize:  pageSize,
-		TotalPage: (TotalData + pageSize - 1) / pageSize,
-	})
+		TotalPage: (totalData + pageSize - 1) / pageSize,
+		TotalData: totalData,
+	}
+	return c.JSON(http.StatusOK, response)
 }
+
 
 // GetRoomsReservationSchedule godoc
 // @Summary Get room reservation schedule
@@ -583,6 +624,147 @@ func GetReservationById(c echo.Context) error {
 				Participant: reservation.Participant,
 			},
 			Total: total,
+		},
+	}
+
+	return c.JSON(http.StatusOK, response)
+}
+
+
+// GetDashboard godoc
+// @Summary Get dashboard data for reservations
+// @Description Retrieve dashboard data including total rooms, total visitors, total reservations, and total omzet within a specified date range.
+// @Tags dashboard
+// @Accept json
+// @Produce json
+// @Param startDate query string true "Start date (YYYY-MM-DD)"
+// @Param endDate query string true "End date (YYYY-MM-DD)"
+// @Param Authorization header string true "Bearer <JWT Token>"
+// @Success 200 {object} models.SuccessResponseDashboard
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /api/v1/dashboard [get]
+func GetDashboard(c echo.Context) error {
+	startDateStr := c.QueryParam("startDate")
+	endDateStr := c.QueryParam("endDate")
+
+	layout := "2006-01-02"
+	startDate, err := time.Parse(layout, startDateStr)
+	if err != nil {
+		fmt.Print("Error parsing start date: ", err)
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid start date format, expected YYYY-MM-DD"})
+	}
+
+	endDate, err := time.Parse(layout, endDateStr)
+	if err != nil {
+		fmt.Print("Error parsing end date: ", err)
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid end date format, expected YYYY-MM-DD"})
+	}
+
+	// Check if the start date is before the end date
+	if startDate.After(endDate) {
+		fmt.Print("Invalid date range: ", startDate, " - ", endDate)
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Start date must be smaller than end date"})
+	}
+
+	// Connect to the database
+	db := configDb.ConnectToDatabase()
+	defer db.Close()
+
+	// Query to get the total number of rooms
+	var totalRooms int
+	roomCountQuery := "SELECT COUNT(*) FROM room"
+	err = db.QueryRow(roomCountQuery).Scan(&totalRooms)
+	if err != nil {
+		fmt.Print("Error counting rooms: ", err)
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error counting rooms"})
+	}
+
+	// Query to get total visitors from "Paid" reservations
+	var totalVisitors int
+	visitorCountQuery := `
+		SELECT SUM(b.total_participant)
+		FROM data_personal_reservation r
+		LEFT JOIN data_booking_room b ON r.id = b.reservation_id
+		WHERE r.reservation_status = 'Paid' AND b.start_date::date >= $1 AND b.end_date::date <= $2
+	`
+	err = db.QueryRow(visitorCountQuery, startDate, endDate).Scan(&totalVisitors)
+	if err != nil {
+		fmt.Print("Error counting visitors: ", err)
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "No Visitor Found in reservation status Paid"})
+	}
+
+	// Query to get total reservations for "Paid" status within the date range
+	var totalReservations int
+	reservationCountQuery := `
+		SELECT COUNT(*)
+		FROM data_personal_reservation r
+		LEFT JOIN data_booking_room b ON r.id = b.reservation_id
+		WHERE r.reservation_status = 'Paid' AND b.start_date::date >= $1 AND b.end_date::date <= $2
+	`
+	err = db.QueryRow(reservationCountQuery, startDate, endDate).Scan(&totalReservations)
+	if err != nil {
+		fmt.Print("Error counting reservations: ", err)
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error counting reservations"})
+	}
+
+	// Query to get total omzet (revenue) for "Paid" reservations within the date range
+	var totalOmzet float64
+	omzetQuery := `
+		SELECT SUM(b.room_price * b.duration + b.snack_price * b.total_participant)
+		FROM data_personal_reservation r
+		LEFT JOIN data_booking_room b ON r.id = b.reservation_id
+		WHERE r.reservation_status = 'Paid' AND b.start_date::date >= $1 AND b.end_date::date <= $2
+	`
+	err = db.QueryRow(omzetQuery, startDate, endDate).Scan(&totalOmzet)
+	if err != nil {
+		fmt.Print("Error calculating omzet: ", err)
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error calculating omzet"})
+	}
+
+	// Query to get room-wise data (room usage and omzet)
+	roomQuery := `
+		SELECT m.id, m.name, COALESCE(SUM(b.room_price * b.duration), 0) as omzet
+		FROM room m
+		LEFT JOIN data_booking_room b ON m.id = b.id_room AND b.reservation_id IN
+			(SELECT id FROM data_personal_reservation WHERE reservation_status = 'Paid')
+		GROUP BY m.id
+	`
+	rows, err := db.Query(roomQuery)
+	if err != nil {
+		fmt.Print("Error fetching room data: ", err)
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error fetching room data"})
+	}
+	defer rows.Close()
+
+	var rooms []models.RoomDashboard
+	for rows.Next() {
+		var room models.RoomDashboard
+		var omzet float64
+		err := rows.Scan(&room.ID, &room.Name, &omzet)
+		if err != nil {
+			fmt.Print("Error scanning room data: ", err)
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error scanning room data"})
+		}
+
+		// Calculate percentage of usage
+		room.Omzet = omzet
+		room.PercentageOfUsage = math.Round((omzet / totalOmzet) * 100 * 100) / 100
+
+		rooms = append(rooms, room)
+	}
+
+	// Prepare the response
+	response := models.SuccessResponseDashboard{
+		Message: "Get dashboard data success",
+		Data: models.DashboardData{
+			TotalRoom:      totalRooms,
+			TotalVisitor:   totalVisitors,
+			TotalReservation: totalReservations,
+			TotalOmzet:      totalOmzet,
+			Rooms:           rooms,
 		},
 	}
 

@@ -15,6 +15,76 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/dashboard": {
+            "get": {
+                "description": "Retrieve dashboard data including total rooms, total visitors, total reservations, and total omzet within a specified date range.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard"
+                ],
+                "summary": "Get dashboard data for reservations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "startDate",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "endDate",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer \u003cJWT Token\u003e",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.SuccessResponseDashboard"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/reservation": {
             "post": {
                 "description": "Create a reservation with room details",
@@ -1143,6 +1213,29 @@ const docTemplate = `{
                 }
             }
         },
+        "models.DashboardData": {
+            "type": "object",
+            "properties": {
+                "rooms": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.RoomDashboard"
+                    }
+                },
+                "totalOmzet": {
+                    "type": "number"
+                },
+                "totalReservation": {
+                    "type": "integer"
+                },
+                "totalRoom": {
+                    "type": "integer"
+                },
+                "totalVisitor": {
+                    "type": "integer"
+                }
+            }
+        },
         "models.EmailResetPassword": {
             "type": "object",
             "properties": {
@@ -1263,9 +1356,6 @@ const docTemplate = `{
                 "companyName": {
                     "type": "string"
                 },
-                "endTime": {
-                    "type": "string"
-                },
                 "id": {
                     "type": "integer"
                 },
@@ -1273,14 +1363,11 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "schedule": {
-                    "description": "Nested",
+                    "description": "Nested schedules array",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/models.ReservationSchedule"
+                        "$ref": "#/definitions/models.ScheduleDetail"
                     }
-                },
-                "startTime": {
-                    "type": "string"
                 }
             }
         },
@@ -1365,6 +1452,23 @@ const docTemplate = `{
                 }
             }
         },
+        "models.RoomDashboard": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "omzet": {
+                    "type": "number"
+                },
+                "percentageOfUsage": {
+                    "type": "number"
+                }
+            }
+        },
         "models.RoomRequest": {
             "type": "object",
             "properties": {
@@ -1386,6 +1490,20 @@ const docTemplate = `{
             }
         },
         "models.RoomsReservationSchedule": {
+            "type": "object",
+            "properties": {
+                "endTime": {
+                    "type": "string"
+                },
+                "startTime": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ScheduleDetail": {
             "type": "object",
             "properties": {
                 "endTime": {
@@ -1458,6 +1576,17 @@ const docTemplate = `{
                 }
             }
         },
+        "models.SuccessResponseDashboard": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/models.DashboardData"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "models.SuccessResponseLogin": {
             "type": "object",
             "properties": {
@@ -1483,12 +1612,6 @@ const docTemplate = `{
         "models.SuccessResponseReservationSchedule": {
             "type": "object",
             "properties": {
-                "data": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.ReservationSchedule"
-                    }
-                },
                 "message": {
                     "type": "string"
                 },
@@ -1497,6 +1620,12 @@ const docTemplate = `{
                 },
                 "pageSize": {
                     "type": "integer"
+                },
+                "reservations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ReservationSchedule"
+                    }
                 },
                 "totalData": {
                     "type": "integer"
