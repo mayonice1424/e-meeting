@@ -73,3 +73,31 @@ type UpdateReservationStatusRequest struct {
 type SuccessResponseUpdateReservationStatus struct {
 	Message string `json:"message"`	
 }
+
+type ReservationSchedule struct {
+	ID          int       `json:"id"`
+	RoomID      int       `json:"roomID"`
+	RoomName    string    `json:"roomName"`
+	StartTime   time.Time `json:"startTime"`
+	EndTime     time.Time `json:"endTime"`	
+	ParticipantCount int  `json:"participantCount"`
+}
+
+type SuccessResponseReservationSchedule struct {
+	Data    []ReservationSchedule `json:"data"`	
+	Message string `json:"message"`
+}
+
+type RoomsReservationSchedule struct {
+	StartTime string `json:"startTime"`
+	EndTime   string `json:"endTime"`
+	Status   string `json:"status"`
+}
+
+type SuccessResponseRoomsReservationSchedule struct {
+	RoomName string `json:"roomName"`
+	Schedule []RoomsReservationSchedule `json:"schedule"`
+	TotalBooked int `json:"totalBooked"`
+}
+
+

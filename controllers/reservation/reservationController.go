@@ -310,3 +310,140 @@ func UpdateReservationStatus(c echo.Context) error {
 		Message: "Update status successfully",
 	})
 }
+
+// ReservationSchedule godoc
+// @Summary Get reservation schedule by ID
+// @Description Retrieve reservation schedule details by reservation ID
+// @Tags reservation
+// @Accept json
+// @Produce json
+// @Param id path int true "Reservation ID"
+// @Param Authorization header string true "Bearer <JWT Token>"
+// @Success 200 {object} models.SuccessResponseReservationSchedule
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /api/v1/reservation/schedule/{id} [get]
+func ReservationSchedule(c echo.Context) error {
+	// ambil parameter dari path
+	reservationID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid reservation ID"})
+	}
+
+	db := configDb.ConnectToDatabase()
+	defer db.Close()
+	// Query: ambil jadwal reservasi berdasarkan reservationID
+	query := `
+		SELECT r.id, r.name, b.start_date, b.end_date, b.total_participant
+		FROM data_booking_room b
+		JOIN room r ON b.id_room = r.id
+		WHERE b.reservation_id = $1
+	`
+
+	rows, err := db.Query(query, reservationID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Message: "Internal server error (query failed)",
+		})
+	}
+	defer rows.Close()
+
+	var schedules []models.ReservationSchedule
+	// Loop untuk membaca hasil query dan masukkan ke slice schedules
+	for rows.Next() {
+		var schedule models.ReservationSchedule
+		err := rows.Scan(
+			&schedule.RoomID,
+			&schedule.RoomName,
+			&schedule.StartTime,
+			&schedule.EndTime,
+			&schedule.ParticipantCount,
+		)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to scan row"})
+		}
+		schedules = append(schedules, schedule)
+	}
+
+	if err = rows.Err(); err != nil {
+		// jika error saat iterasi hasil query, return 500
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal server error"})
+	}
+	if len(schedules) == 0 {
+		return c.JSON(http.StatusNotFound, models.ErrorResponse{Message: "No reservation found for the given ID"})
+	}
+	// Buat respone dalam format sesuai models
+	return c.JSON(http.StatusOK, models.SuccessResponseReservationSchedule{Data: schedules, Message: "Reservation schedule retrieved successfully"})
+}
+
+// GetRoomsReservationSchedule godoc
+// @Summary Get room reservation schedule
+// @Description Retrieve the reservation schedule for a specific room on a given date
+// @Tags reservation
+// @Accept json
+// @Produce json
+// @Param id_room query int true "Room ID"
+// @Param start_date query string true "Date (YYYY-MM-DD)"
+// @Param Authorization header string true "Bearer <JWT Token>"
+// @Success 200 {object} models.SuccessResponseRoomsReservationSchedule
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /api/v1/reservation/rooms/schedule [get]
+func GetRoomsReservationSchedule(c echo.Context) error {
+	// ambil parameter dari path dan query
+	idRoom := c.Param("id_room")
+	startDate := c.QueryParam("start_date")
+
+	//validasi input StartDate
+	if startDate == "" {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "start_date is required"})
+	}
+
+	db := configDb.ConnectToDatabase()
+	defer db.Close()
+
+	// Query: ambil nama room berdasarkan idRoom
+	var roomName string
+	err := db.QueryRow("SELECT name FROM room WHERE id = $1", idRoom).Scan(&roomName)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// jika room tidak ditemukan, return 404
+			return c.JSON(http.StatusNotFound, models.ErrorResponse{Message: "Url not found"})
+		} else if err != nil {
+			// jika error lain saat ambil data room, return 500
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal server error"})
+		}
+	}
+
+	// Query: ambil jadwal reservasi berdasarkan idRoom dan startDate
+	rows, err := db.Query(`
+		SELECT start_date, end_date, status
+		FROM reservations
+		WHERE room_id = $1 AND DATE(start_date) = $2
+		ORDER BY start_date ASC
+	`, idRoom, startDate)
+	if err != nil {
+		// jika error saat eksekusi query, return 500
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal server error"})
+	}
+	defer rows.Close()
+	// proses hasil query
+	var schedules []models.RoomsReservationSchedule
+	// Loop untuk membaca hasil query dan masukkan ke slice schedules
+	for rows.Next() {
+		var schedule models.RoomsReservationSchedule
+		err := rows.Scan(&schedule.StartTime, &schedule.EndTime, &schedule.Status)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal server error"})
+		}
+		schedules = append(schedules, schedule)
+	}
+	// Buat respone dalam format sesuai models
+	return c.JSON(http.StatusOK, models.SuccessResponseRoomsReservationSchedule{
+		RoomName:    roomName,
+		Schedule:    schedules,
+		TotalBooked: len(schedules),
+	})
+}
