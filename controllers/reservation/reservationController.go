@@ -663,17 +663,14 @@ func GetDashboard(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid end date format, expected YYYY-MM-DD"})
 	}
 
-	// Check if the start date is before the end date
 	if startDate.After(endDate) {
 		fmt.Print("Invalid date range: ", startDate, " - ", endDate)
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Start date must be smaller than end date"})
 	}
 
-	// Connect to the database
 	db := configDb.ConnectToDatabase()
 	defer db.Close()
 
-	// Query to get the total number of rooms
 	var totalRooms int
 	roomCountQuery := "SELECT COUNT(*) FROM room"
 	err = db.QueryRow(roomCountQuery).Scan(&totalRooms)
@@ -682,7 +679,6 @@ func GetDashboard(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error counting rooms"})
 	}
 
-	// Query to get total visitors from "Paid" reservations
 	var totalVisitors int
 	visitorCountQuery := `
 		SELECT SUM(b.total_participant)
@@ -696,7 +692,6 @@ func GetDashboard(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "No Visitor Found in reservation status Paid"})
 	}
 
-	// Query to get total reservations for "Paid" status within the date range
 	var totalReservations int
 	reservationCountQuery := `
 		SELECT COUNT(*)
@@ -710,7 +705,6 @@ func GetDashboard(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error counting reservations"})
 	}
 
-	// Query to get total omzet (revenue) for "Paid" reservations within the date range
 	var totalOmzet float64
 	omzetQuery := `
 		SELECT SUM(b.room_price * b.duration + b.snack_price * b.total_participant)
@@ -724,13 +718,13 @@ func GetDashboard(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error calculating omzet"})
 	}
 
-	// Query to get room-wise data (room usage and omzet)
 	roomQuery := `
 		SELECT m.id, m.name, COALESCE(SUM(b.room_price * b.duration), 0) as omzet
 		FROM room m
 		LEFT JOIN data_booking_room b ON m.id = b.id_room AND b.reservation_id IN
 			(SELECT id FROM data_personal_reservation WHERE reservation_status = 'Paid')
 		GROUP BY m.id
+		ORDER BY m.id ASC
 	`
 	rows, err := db.Query(roomQuery)
 	if err != nil {
@@ -749,14 +743,12 @@ func GetDashboard(c echo.Context) error {
 			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error scanning room data"})
 		}
 
-		// Calculate percentage of usage
 		room.Omzet = omzet
 		room.PercentageOfUsage = math.Round((omzet / totalOmzet) * 100 * 100) / 100
 
 		rooms = append(rooms, room)
 	}
 
-	// Prepare the response
 	response := models.SuccessResponseDashboard{
 		Message: "Get dashboard data success",
 		Data: models.DashboardData{
