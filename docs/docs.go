@@ -180,6 +180,63 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/reservation/schedule/{id}": {
+            "get": {
+                "description": "Retrieve reservation schedule details by reservation ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reservation"
+                ],
+                "summary": "Get reservation schedule by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Reservation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer \u003cJWT Token\u003e",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.SuccessResponseReservationSchedule"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/reservation/status/{id}": {
             "put": {
                 "description": "Update the status of a reservation",
@@ -544,6 +601,70 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/rooms/{id}/reservation": {
+            "get": {
+                "description": "Retrieve the reservation schedule for a specific room on a given date",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reservation"
+                ],
+                "summary": "Get room reservation schedule",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Room ID",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Date (YYYY-MM-DD)",
+                        "name": "start_date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer \u003cJWT Token\u003e",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.SuccessResponseRoomsReservationSchedule"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/models.ErrorResponse"
                         }
@@ -1129,6 +1250,29 @@ const docTemplate = `{
                 }
             }
         },
+        "models.ReservationSchedule": {
+            "type": "object",
+            "properties": {
+                "endTime": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "participantCount": {
+                    "type": "integer"
+                },
+                "roomID": {
+                    "type": "integer"
+                },
+                "roomName": {
+                    "type": "string"
+                },
+                "startTime": {
+                    "type": "string"
+                }
+            }
+        },
         "models.ResetPasswordById": {
             "type": "object",
             "properties": {
@@ -1176,10 +1320,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "duration": {
-                    "description": "Duration in hours",
                     "type": "integer"
                 },
-                "endTime": {
+                "end_time": {
                     "type": "string"
                 },
                 "imageURL": {
@@ -1197,7 +1340,7 @@ const docTemplate = `{
                 "snack": {
                     "$ref": "#/definitions/models.SnackCategory"
                 },
-                "startTime": {
+                "start_time": {
                     "type": "string"
                 },
                 "subTotalRoom": {
@@ -1227,6 +1370,20 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "startTime": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.RoomsReservationSchedule": {
+            "type": "object",
+            "properties": {
+                "endTime": {
+                    "type": "string"
+                },
+                "startTime": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 }
             }
@@ -1312,6 +1469,20 @@ const docTemplate = `{
                 }
             }
         },
+        "models.SuccessResponseReservationSchedule": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ReservationSchedule"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "models.SuccessResponseResetPassword": {
             "type": "object",
             "properties": {
@@ -1325,6 +1496,23 @@ const docTemplate = `{
             "properties": {
                 "message": {
                     "type": "string"
+                }
+            }
+        },
+        "models.SuccessResponseRoomsReservationSchedule": {
+            "type": "object",
+            "properties": {
+                "roomName": {
+                    "type": "string"
+                },
+                "schedule": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.RoomsReservationSchedule"
+                    }
+                },
+                "totalBooked": {
+                    "type": "integer"
                 }
             }
         },

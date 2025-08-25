@@ -97,6 +97,21 @@ definitions:
       userID:
         type: integer
     type: object
+  models.ReservationSchedule:
+    properties:
+      endTime:
+        type: string
+      id:
+        type: integer
+      participantCount:
+        type: integer
+      roomID:
+        type: integer
+      roomName:
+        type: string
+      startTime:
+        type: string
+    type: object
   models.ResetPasswordById:
     properties:
       confirm_password:
@@ -128,9 +143,8 @@ definitions:
       capacity:
         type: integer
       duration:
-        description: Duration in hours
         type: integer
-      endTime:
+      end_time:
         type: string
       imageURL:
         type: string
@@ -142,7 +156,7 @@ definitions:
         type: number
       snack:
         $ref: '#/definitions/models.SnackCategory'
-      startTime:
+      start_time:
         type: string
       subTotalRoom:
         type: number
@@ -162,6 +176,15 @@ definitions:
       snackID:
         type: integer
       startTime:
+        type: string
+    type: object
+  models.RoomsReservationSchedule:
+    properties:
+      endTime:
+        type: string
+      startTime:
+        type: string
+      status:
         type: string
     type: object
   models.Snack:
@@ -216,6 +239,15 @@ definitions:
       message:
         type: string
     type: object
+  models.SuccessResponseReservationSchedule:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.ReservationSchedule'
+        type: array
+      message:
+        type: string
+    type: object
   models.SuccessResponseResetPassword:
     properties:
       data:
@@ -225,6 +257,17 @@ definitions:
     properties:
       message:
         type: string
+    type: object
+  models.SuccessResponseRoomsReservationSchedule:
+    properties:
+      roomName:
+        type: string
+      schedule:
+        items:
+          $ref: '#/definitions/models.RoomsReservationSchedule'
+        type: array
+      totalBooked:
+        type: integer
     type: object
   models.SuccessResponseSnack:
     properties:
@@ -475,6 +518,44 @@ paths:
       summary: Endpoint for calculating reservation
       tags:
       - reservation
+  /api/v1/reservation/schedule/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve reservation schedule details by reservation ID
+      parameters:
+      - description: Reservation ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Bearer <JWT Token>
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SuccessResponseReservationSchedule'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get reservation schedule by ID
+      tags:
+      - reservation
   /api/v1/reservation/status/{id}:
     put:
       consumes:
@@ -695,6 +776,50 @@ paths:
       summary: Endpoint for updating room by id
       tags:
       - rooms
+  /api/v1/rooms/{id}/reservation:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve the reservation schedule for a specific room on a given
+        date
+      parameters:
+      - description: Room ID
+        in: query
+        name: id
+        required: true
+        type: integer
+      - description: Date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: Bearer <JWT Token>
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SuccessResponseRoomsReservationSchedule'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get room reservation schedule
+      tags:
+      - reservation
   /api/v1/snack:
     get:
       consumes:
