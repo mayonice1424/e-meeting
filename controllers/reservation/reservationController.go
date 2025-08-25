@@ -707,7 +707,7 @@ func GetDashboard(c echo.Context) error {
 
 	var totalOmzet float64
 	omzetQuery := `
-		SELECT SUM(b.room_price * b.duration + b.snack_price * b.total_participant)
+		SELECT SUM(b.room_price * b.duration)
 		FROM data_personal_reservation r
 		LEFT JOIN data_booking_room b ON r.id = b.reservation_id
 		WHERE r.reservation_status = 'Paid' AND b.start_date::date >= $1 AND b.end_date::date <= $2
