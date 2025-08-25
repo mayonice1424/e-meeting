@@ -180,63 +180,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/reservation/schedule/{id}": {
-            "get": {
-                "description": "Retrieve reservation schedule details by reservation ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "reservation"
-                ],
-                "summary": "Get reservation schedule by ID",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Reservation ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Bearer \u003cJWT Token\u003e",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/models.SuccessResponseReservationSchedule"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/models.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/reservation/status/{id}": {
             "put": {
                 "description": "Update the status of a reservation",
@@ -347,6 +290,70 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/reservations/schedules": {
+            "get": {
+                "description": "Retrieve the reservation schedule within a specified date range with pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reservation"
+                ],
+                "summary": "Get reservation schedule",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "start_date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "end_date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default is 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer \u003cJWT Token\u003e",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.SuccessResponseReservationSchedule"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/models.ErrorResponse"
                         }
@@ -1253,20 +1260,24 @@ const docTemplate = `{
         "models.ReservationSchedule": {
             "type": "object",
             "properties": {
+                "companyName": {
+                    "type": "string"
+                },
                 "endTime": {
                     "type": "string"
                 },
                 "id": {
                     "type": "integer"
                 },
-                "participantCount": {
-                    "type": "integer"
-                },
-                "roomID": {
-                    "type": "integer"
-                },
                 "roomName": {
                     "type": "string"
+                },
+                "schedule": {
+                    "description": "Nested",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ReservationSchedule"
+                    }
                 },
                 "startTime": {
                     "type": "string"
@@ -1480,6 +1491,18 @@ const docTemplate = `{
                 },
                 "message": {
                     "type": "string"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "totalData": {
+                    "type": "integer"
+                },
+                "totalPage": {
+                    "type": "integer"
                 }
             }
         },

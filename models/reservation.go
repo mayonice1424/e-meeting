@@ -110,17 +110,25 @@ type ReservationCalculationReservation struct {
 	Total         float64                      `json:"total"`
 }
 type ReservationSchedule struct {
-	ID          int       `json:"id"`
-	RoomID      int       `json:"roomID"`
-	RoomName    string    `json:"roomName"`
-	StartTime   time.Time `json:"startTime"`
-	EndTime     time.Time `json:"endTime"`	
-	ParticipantCount int  `json:"participantCount"`
+	ID 	  int    `json:"id"`
+	RoomName string `json:"roomName"`
+	CompanyName string `json:"companyName"`
+	Schedule []ScheduleDetail `json:"schedule"` // Nested
 }
 
-type SuccessResponseReservationSchedule struct {
-	Data    []ReservationSchedule `json:"data"`	
+type ScheduleDetail struct {
+	StartTime string `json:"startTime"`
+	EndTime   string `json:"endTime"`
+	Status string `json:"status"`
+}
+
+type SuccessResponseReservationSchedule struct {	
 	Message string `json:"message"`
+	Data    []ReservationSchedule `json:"reservations"`
+	TotalData int `json:"totalData"`
+	Page int `json:"page"`
+	PageSize int `json:"pageSize"`
+	TotalPage int `json:"totalPage"`
 }
 
 type RoomsReservationSchedule struct {
