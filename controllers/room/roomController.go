@@ -6,16 +6,32 @@ import (
 	"emeeting/models"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/joho/godotenv"
+
 	"github.com/labstack/echo/v4"
 	_ "github.com/lib/pq"
 	// "fmt"
 )
+
+var baseUrl string
+
+func init() {
+    err := godotenv.Load()
+		if err != nil {
+        log.Fatal("Error loading .env file")
+    }
+		baseUrl = os.Getenv("BASE_URL")
+		if baseUrl == "" {
+			log.Fatal("BASE_URL is not set in the environment")
+		}
+}
 
 // GetRooms godoc
 // @Summary Endpoint Get all rooms with pagination
@@ -321,7 +337,7 @@ func UpdateRoom(c echo.Context) error {
 			if err != nil {
 				return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to move file: " + err.Error()})
 			}
-			room.Picture = fmt.Sprintf("http://localhost:8080/uploads/%s", fileName)
+			room.Picture = fmt.Sprintf("%s/uploads/%s", baseUrl, fileName)
 		}
 		updateFields = append(updateFields, fmt.Sprintf("picture=$%d", paramCount))
 		updateValues = append(updateValues, room.Picture)

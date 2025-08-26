@@ -7,10 +7,23 @@ import (
 	"os"
 	"path/filepath"
 	"emeeting/models"
+	"github.com/joho/godotenv"
+	"log"
 	"strings"
 	"io"
 )
 
+var baseUrl string
+func init() {
+    err := godotenv.Load()
+    if err != nil {
+        log.Fatal("Error loading .env file")
+    }
+		baseUrl = os.Getenv("BASE_URL")
+		if baseUrl == "" {
+			log.Fatal("BASE_URL is not set in the environment")
+		}
+}
 // UploadHandler godoc
 // @Summary Upload file
 // @Description Upload an image file and save it to the server
@@ -90,7 +103,7 @@ func UploadHandler(c echo.Context) error {
 		})
 	}
 
-	imageURL := fmt.Sprintf("http://localhost:8080/temp/%s", filepath.Base(filePath))
+	imageURL := fmt.Sprintf("%s/temp/%s", baseUrl, filepath.Base(filePath))
 
 	response := models.UploadResponse{
 		Message: "upload file success",

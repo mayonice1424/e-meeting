@@ -19,6 +19,7 @@ var (
 	dbUser     string
 	dbPassword string
 	dbName     string
+	ServerPort string
 )
 
 func init() {
@@ -31,6 +32,7 @@ func init() {
 	dbUser = os.Getenv("DB_USER")
 	dbPassword = os.Getenv("DB_PASSWORD")
 	dbName = os.Getenv("DB_NAME")
+	ServerPort = os.Getenv("SERVER_PORT")
 }
 
 func ConnectToDatabase() *sql.DB {
