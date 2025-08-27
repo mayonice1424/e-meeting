@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 
@@ -124,9 +125,7 @@ func GetRooms(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal Server Error"})
 	}
 
-	if rooms == nil {
-		return c.JSON(http.StatusNotFound, models.ErrorResponse{Message: "No rooms found"})
-	}
+
 
 	var totalRooms int
 	err = db.QueryRow("SELECT COUNT(*) FROM room WHERE 1=1").Scan(&totalRooms)
@@ -135,7 +134,16 @@ func GetRooms(c echo.Context) error {
 	}
 
 	totalPages := (totalRooms + pageSize - 1) / pageSize
-
+	if rooms == nil {
+		return c.JSON(http.StatusOK, models.SuccessResponseRooms{
+		Data:      rooms,
+		Message:   "Rooms retrieved successfully",
+		Page:      page,
+		PageSize:  pageSize,
+		TotalPage: totalPages,
+		TotalData: totalRooms,
+		})
+	}
 	return c.JSON(http.StatusOK, models.SuccessResponseRooms{
 		Data:      rooms,
 		Message:   "Rooms retrieved successfully",
@@ -370,23 +378,38 @@ func UpdateRoom(c echo.Context) error {
 }
 
 
-func moveFile(sourcePath string, destPath string) error {
-	sourceFile, err := os.Open(sourcePath)
-	if err != nil {
-		return err
-	}
-	defer sourceFile.Close()
+func moveFile(sourcePath, destPath string) error {
+    if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
+        return fmt.Errorf("create dest dir: %w", err)
+    }
 
-	destFile, err := os.Create(destPath)
-	if err != nil {
-		return err
-	}
-	defer destFile.Close()
+    if err := os.Rename(sourcePath, destPath); err == nil {
+        return nil
+    }
 
-	_, err = io.Copy(destFile, sourceFile)
-	if err != nil {
-		return err
-	}
+    src, err := os.Open(sourcePath)
+    if err != nil {
+        return fmt.Errorf("open source: %w", err)
+    }
+    defer src.Close()
 
-	return nil
+    dst, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+    if err != nil {
+        return fmt.Errorf("create dest: %w", err)
+    }
+    defer dst.Close()
+
+    if _, err := io.Copy(dst, src); err != nil {
+        return fmt.Errorf("copy: %w", err)
+    }
+
+    var rmErr error
+    for i := 0; i < 5; i++ {
+        rmErr = os.Remove(sourcePath)
+        if rmErr == nil {
+            return nil
+        }
+        time.Sleep(200 * time.Millisecond) 
+    }
+    return fmt.Errorf("remove source: %w", rmErr)
 }

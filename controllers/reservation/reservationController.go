@@ -68,6 +68,9 @@ func ReservationCalculation(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid end time format"})
 	}
+	if startTimeParsed.After(endTimeParsed) {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "End time cannot be earlier than start time"})
+	}
 	duration := endTimeParsed.Sub(startTimeParsed).Hours()
 	db := configDb.ConnectToDatabase()
 	defer db.Close()
@@ -77,6 +80,9 @@ func ReservationCalculation(c echo.Context) error {
 	err = db.QueryRow(queryRoom, roomID).Scan(&room.ID, &room.Name, &room.PricePerHour, &room.Capacity, &room.Picture)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, models.ErrorResponse{Message: "Room not found"})
+	}
+	if participant > room.Capacity {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Participant count exceeds room capacity"})
 	}
 
 	var snack models.SnackCategory
@@ -303,12 +309,10 @@ func UpdateReservationStatus(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal server error"})
 	}
 
-	// Check if already canceled or paid
 	if currentStatus == "Cancelled" || currentStatus == "Paid" {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "reservation already cancelled/paid"})
 	}
 
-	// Update Status
 	updateQuery := "UPDATE data_personal_reservation SET reservation_status = $1 WHERE id = $2"
 	_, err = db.Exec(updateQuery, request.Status, reservationID)
 	if err != nil {
