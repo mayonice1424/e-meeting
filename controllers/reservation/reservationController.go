@@ -766,105 +766,170 @@ func GetDashboard(c echo.Context) error {
 
 // GetReservationHistory godoc
 // @Summary Get reservation history
-// @Description Retrieve reservation history with filtering and pagination
+// @Description Get filtered and paginated reservation history
 // @Tags reservation
 // @Accept json
 // @Produce json
-// @Param startDate query string false "Start date (YYYY-MM-DD)"
-// @Param endDate query string false "End date (YYYY-MM-DD)"
-// @Param roomType query string false "Room type (vip, suite)"
+// @Param startDate query string false "start date (YYYY-MM-DD)"
+// @Param endDate query string false "end date (YYYY-MM-DD)"
+// @Param type query string false "Room type (Small, Medium, Large)"
 // @Param status query string false "Reservation status"
 // @Param Authorization header string true "Bearer <JWT Token>"
 // @Success 200 {object} models.ReservationHistoryResponse
 // @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
-// @Router /api/v1/reservations/history [get]
+// @Router /reservation/history [get]
 func GetReservationHistory(c echo.Context) error {
 	startDate := c.QueryParam("startDate")
 	endDate := c.QueryParam("endDate")
-	roomType := c.QueryParam("roomType")
+	roomType := c.QueryParam("type")
 	status := c.QueryParam("status")
+
+	pageStr := c.QueryParam("page")
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page <= 0 {
+		page = 1
+	}
+	pageSize := 10
+	offset := (page - 1) * pageSize
 
 	db := configDb.ConnectToDatabase()
 	defer db.Close()
 
 	// Validasi room type
-	if roomType != "" {
-		if roomType != "vip" && roomType != "suite" {
-			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "room type is not valid"})
-		}
+	if roomType != "" && roomType != "Small" && roomType != "Medium" && roomType != "Large" {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "room type is not valid"})
 	}
 
-	// query dasar: ambil data reservation
-	query := `SELECT id, name, phone_number, company, total, status, created_at, updated_at FROM reservations WHERE 1=1`
-	var args []interface{}
+	// Hitung total data (count)
+	countQuery := `
+	SELECT COUNT(DISTINCT dpr.id)
+	FROM data_personal_reservation dpr
+	LEFT JOIN data_booking_room dbr ON dpr.id = dbr.reservation_id
+	LEFT JOIN room r ON dbr.id_room = r.id
+	WHERE 1=1`
+	var countArgs []interface{}
+	argIndex := 1
 
-	// tambahkan kondisi berdasarkan parameter query
 	if startDate != "" {
-		query += " AND created_at >= ?"
-		args = append(args, startDate)
+		countQuery += fmt.Sprintf(" AND dbr.start_date >= $%d", argIndex)
+		countArgs = append(countArgs, startDate)
+		argIndex++
 	}
 	if endDate != "" {
-		query += " AND created_at <= ?"
-		args = append(args, endDate)
+		countQuery += fmt.Sprintf(" AND dbr.end_date <= $%d", argIndex)
+		countArgs = append(countArgs, endDate)
+		argIndex++
 	}
 	if roomType != "" {
-		query += " AND room_type = ?"
-		args = append(args, roomType)
+		countQuery += fmt.Sprintf(" AND r.type = $%d", argIndex)
+		countArgs = append(countArgs, roomType)
+		argIndex++
 	}
 	if status != "" {
-		query += " AND status = ?"
-		args = append(args, status)
+		countQuery += fmt.Sprintf(" AND dpr.reservation_status = $%d", argIndex)
+		countArgs = append(countArgs, status)
+		argIndex++
 	}
+
+	var totalData int
+	err = db.QueryRow(countQuery, countArgs...).Scan(&totalData)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "internal server error"})
+	}
+
+	// Ambil data reservasi
+	query := `
+	SELECT DISTINCT dpr.id, dpr.name, dpr.no_hp, dpr.company_name, dpr.total_invoice, dpr.reservation_status, dpr.created_at, dpr.updated_at
+	FROM data_personal_reservation dpr
+	LEFT JOIN data_booking_room dbr ON dpr.id = dbr.reservation_id
+	LEFT JOIN room r ON dbr.id_room = r.id
+	WHERE 1=1`
+	var args []interface{}
+	argIndex = 1
+
+	if startDate != "" {
+		query += fmt.Sprintf(" AND dbr.start_date >= $%d", argIndex)
+		args = append(args, startDate)
+		argIndex++
+	}
+	if endDate != "" {
+		query += fmt.Sprintf(" AND dbr.end_date <= $%d", argIndex)
+		args = append(args, endDate)
+		argIndex++
+	}
+	if roomType != "" {
+		query += fmt.Sprintf(" AND r.type = $%d", argIndex)
+		args = append(args, roomType)
+		argIndex++
+	}
+	if status != "" {
+		query += fmt.Sprintf(" AND dpr.reservation_status = $%d", argIndex)
+		args = append(args, status)
+		argIndex++
+	}
+
+	// Tambahkan pagination
+	query += fmt.Sprintf(" ORDER BY dpr.created_at DESC LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
+	args = append(args, pageSize, offset)
 
 	rows, err := db.Query(query, args...)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal server error"})
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "internal server error"})
 	}
 	defer rows.Close()
 
 	var reservations []models.ReservationHistory
 	for rows.Next() {
-		var Res models.ReservationHistory
-		if err := rows.Scan(&Res.ID, &Res.Name, &Res.PhoneNumber, &Res.Company, &Res.Total, &Res.Status, &Res.CreatedAt, &Res.UpdatedAt); err != nil {
-			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal server error"})
+		var r models.ReservationHistory
+		err := rows.Scan(&r.ID, &r.Name, &r.PhoneNumber, &r.Company, &r.Total, &r.Status, &r.CreatedAt, &r.UpdatedAt)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "internal server error"})
 		}
-		// Ambil data ruangan untuk setiap reservation
-		roomQuery := `SELECT id, price, name, type, sub_total_room, sub_total_snack FROM reservation_rooms WHERE reservation_id = ?`
-		var roomArgs []interface{}
-		roomArgs = append(roomArgs, Res.ID)
 
+		// Ambil room untuk setiap reservasi
+		roomQuery := `SELECT id, price, name, type, sub_total_room, sub_total_snack FROM reservation_rooms WHERE reservation_id = $1`
+		roomArgs := []interface{}{r.ID}
 		if roomType != "" {
-			roomQuery += " AND type = ?"
+			roomQuery += fmt.Sprintf(" AND type = $%d", len(roomArgs)+1)
 			roomArgs = append(roomArgs, roomType)
 		}
 
 		roomRows, err := db.Query(roomQuery, roomArgs...)
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal server error"})
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "internal server error"})
 		}
-
 		for roomRows.Next() {
 			var room models.RoomHistory
 			err := roomRows.Scan(&room.ID, &room.Price, &room.Name, &room.Type, &room.SubTotalRoom, &room.SubTotalSnack)
 			if err != nil {
-				return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal server error"})
+				return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "internal server error"})
 			}
-			room.Snack = struct{}{} // Kosongkan objek snack sesuai permintaan
-			Res.Rooms = append(Res.Rooms, room)
+			room.Snack = struct{}{}
+			r.Rooms = append(r.Rooms, room)
 		}
 		roomRows.Close()
 
-		reservations = append(reservations, Res)
+		reservations = append(reservations, r)
 	}
 
-	// Simulasi pagination (static)
+	totalPage := (totalData + pageSize - 1) / pageSize
+
 	return c.JSON(http.StatusOK, models.ReservationHistoryResponse{
 		Message:   "Get reservation history success",
 		Data:      reservations,
-		Page:      1,
-		PageSize:  len(reservations),
-		TotalPage: 1,
-		TotalData: len(reservations),
+		Page:      page,
+		PageSize:  pageSize,
+		TotalPage: totalPage,
+		TotalData: totalData,
 	})
 }
+
+
+
+
+
+
+	
