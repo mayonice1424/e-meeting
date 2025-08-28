@@ -45,9 +45,6 @@ func GetSnacks(c echo.Context) error {
 	if err := rows.Err(); err != nil {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "error iterating over snacks: " + err.Error()})
 	}
-	if len(snacks) == 0 {
-		return c.JSON(http.StatusNotFound, models.ErrorResponse{Message: "no snacks found"})
-	}
 	return c.JSON(http.StatusOK, models.SuccessResponseSnack{Data: snacks, Message: "snacks retrieved successfully"})
 }
 
