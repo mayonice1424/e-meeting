@@ -5,9 +5,9 @@ import (
 	configDb "emeeting/config"
 	"emeeting/models"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
-	"math"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -425,16 +425,15 @@ func GetReservationSchedule(c echo.Context) error {
 	}
 
 	response := models.SuccessResponseReservationSchedule{
-		Message:   "Reservation schedule fetched successfully",
+		Message:      "Reservation schedule fetched successfully",
 		Reservations: schedules,
-		Page:      page,
-		PageSize:  pageSize,
-		TotalPage: (totalData + pageSize - 1) / pageSize,
-		TotalData: totalData,
+		Page:         page,
+		PageSize:     pageSize,
+		TotalPage:    (totalData + pageSize - 1) / pageSize,
+		TotalData:    totalData,
 	}
 	return c.JSON(http.StatusOK, response)
 }
-
 
 // GetRoomsReservationSchedule godoc
 // @Summary Get room reservation schedule
@@ -630,7 +629,6 @@ func GetReservationById(c echo.Context) error {
 	return c.JSON(http.StatusOK, response)
 }
 
-
 // GetDashboard godoc
 // @Summary Get dashboard data for reservations
 // @Description Retrieve dashboard data including total rooms, total visitors, total reservations, and total omzet within a specified date range.
@@ -744,7 +742,7 @@ func GetDashboard(c echo.Context) error {
 		}
 
 		room.Omzet = omzet
-		room.PercentageOfUsage = math.Round((omzet / totalOmzet) * 100 * 100) / 100
+		room.PercentageOfUsage = math.Round((omzet/totalOmzet)*100*100) / 100
 
 		rooms = append(rooms, room)
 	}
@@ -752,13 +750,117 @@ func GetDashboard(c echo.Context) error {
 	response := models.SuccessResponseDashboard{
 		Message: "Get dashboard data success",
 		Data: models.DashboardData{
-			TotalRoom:      totalRooms,
-			TotalVisitor:   totalVisitors,
+			TotalRoom:        totalRooms,
+			TotalVisitor:     totalVisitors,
 			TotalReservation: totalReservations,
-			TotalOmzet:      totalOmzet,
-			Rooms:           rooms,
+			TotalOmzet:       totalOmzet,
+			Rooms:            rooms,
 		},
 	}
-
 	return c.JSON(http.StatusOK, response)
+}
+
+// GetReservationHistory godoc
+// @Summary Get reservation history
+// @Description Retrieve reservation history with filtering and pagination
+// @Tags reservation
+// @Accept json
+// @Produce json
+// @Param startDate query string false "Start date (YYYY-MM-DD)"
+// @Param endDate query string false "End date (YYYY-MM-DD)"
+// @Param roomType query string false "Room type (vip, suite)"
+// @Param status query string false "Reservation status"
+// @Param Authorization header string true "Bearer <JWT Token>"
+// @Success 200 {object} models.ReservationHistoryResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /api/v1/reservations/history [get]
+func GetReservationHistory(c echo.Context) error {
+	startDate := c.QueryParam("startDate")
+	endDate := c.QueryParam("endDate")
+	roomType := c.QueryParam("roomType")
+	status := c.QueryParam("status")
+
+	db := configDb.ConnectToDatabase()
+	defer db.Close()
+
+	// Validasi room type
+	if roomType != "" {
+		if roomType != "vip" && roomType != "suite" {
+			return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "room type is not valid"})
+		}
+	}
+
+	// query dasar: ambil data reservation
+	query := `SELECT id, name, phone_number, company, total, status, created_at, updated_at FROM reservations WHERE 1=1`
+	var args []interface{}
+
+	// tambahkan kondisi berdasarkan parameter query
+	if startDate != "" {
+		query += " AND created_at >= ?"
+		args = append(args, startDate)
+	}
+	if endDate != "" {
+		query += " AND created_at <= ?"
+		args = append(args, endDate)
+	}
+	if roomType != "" {
+		query += " AND room_type = ?"
+		args = append(args, roomType)
+	}
+	if status != "" {
+		query += " AND status = ?"
+		args = append(args, status)
+	}
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal server error"})
+	}
+	defer rows.Close()
+
+	var reservations []models.ReservationHistory
+	for rows.Next() {
+		var Res models.ReservationHistory
+		if err := rows.Scan(&Res.ID, &Res.Name, &Res.PhoneNumber, &Res.Company, &Res.Total, &Res.Status, &Res.CreatedAt, &Res.UpdatedAt); err != nil {
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal server error"})
+		}
+		// Ambil data ruangan untuk setiap reservation
+		roomQuery := `SELECT id, price, name, type, sub_total_room, sub_total_snack FROM reservation_rooms WHERE reservation_id = ?`
+		var roomArgs []interface{}
+		roomArgs = append(roomArgs, Res.ID)
+
+		if roomType != "" {
+			roomQuery += " AND type = ?"
+			roomArgs = append(roomArgs, roomType)
+		}
+
+		roomRows, err := db.Query(roomQuery, roomArgs...)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal server error"})
+		}
+
+		for roomRows.Next() {
+			var room models.RoomHistory
+			err := roomRows.Scan(&room.ID, &room.Price, &room.Name, &room.Type, &room.SubTotalRoom, &room.SubTotalSnack)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Internal server error"})
+			}
+			room.Snack = struct{}{} // Kosongkan objek snack sesuai permintaan
+			Res.Rooms = append(Res.Rooms, room)
+		}
+		roomRows.Close()
+
+		reservations = append(reservations, Res)
+	}
+
+	// Simulasi pagination (static)
+	return c.JSON(http.StatusOK, models.ReservationHistoryResponse{
+		Message:   "Get reservation history success",
+		Data:      reservations,
+		Page:      1,
+		PageSize:  len(reservations),
+		TotalPage: 1,
+		TotalData: len(reservations),
+	})
 }

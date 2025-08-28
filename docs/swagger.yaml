@@ -95,6 +95,46 @@ definitions:
       total:
         type: number
     type: object
+  models.ReservationHistory:
+    properties:
+      company:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      phoneNumber:
+        type: number
+      rooms:
+        items:
+          $ref: '#/definitions/models.RoomHistory'
+        type: array
+      status:
+        type: string
+      total:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+  models.ReservationHistoryResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.ReservationHistory'
+        type: array
+      message:
+        type: string
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      totalData:
+        type: integer
+      totalPage:
+        type: integer
+    type: object
   models.ReservationRequest:
     properties:
       company:
@@ -189,6 +229,22 @@ definitions:
         type: number
       percentageOfUsage:
         type: number
+    type: object
+  models.RoomHistory:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      price:
+        type: number
+      snack: {}
+      subTotalRoom:
+        type: number
+      subTotalSnack:
+        type: number
+      type:
+        type: string
     type: object
   models.RoomRequest:
     properties:
@@ -657,6 +713,51 @@ paths:
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Update reservation status
+      tags:
+      - reservation
+  /api/v1/reservations/history:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve reservation history with filtering and pagination
+      parameters:
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: startDate
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: endDate
+        type: string
+      - description: Room type (vip, suite)
+        in: query
+        name: roomType
+        type: string
+      - description: Reservation status
+        in: query
+        name: status
+        type: string
+      - description: Bearer <JWT Token>
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.ReservationHistoryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get reservation history
       tags:
       - reservation
   /api/v1/reservations/schedules:

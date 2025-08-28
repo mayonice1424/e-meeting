@@ -163,3 +163,40 @@ type SuccessResponseDashboard struct {
 	Data    DashboardData `json:"data"`
 }
 
+type RoomHistory struct {
+	ID          int       `json:"id"`
+	Price       float64   `json:"price"`
+	Name        string    `json:"name"`
+	Type        string    `json:"type"`
+	SubTotalRoom  float64   `json:"subTotalRoom"`
+	SubTotalSnack float64   `json:"subTotalSnack"`
+	Snack       interface{}  `json:"snack"` 
+}
+
+// Reservation merepresentasikan data reservasi
+type ReservationHistory struct {
+	ID          int       `json:"id"`
+	Name        string    `json:"name"`
+	PhoneNumber float64   `json:"phoneNumber"`
+	Company     string    `json:"company"`
+	Total       int       `json:"total"`
+	Status      string    `json:"status"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
+	Rooms       []RoomHistory `json:"rooms"`
+}
+
+type ReservationHistoryResponse struct {
+	Message string `json:"message"`
+	Data    []ReservationHistory `json:"data"`
+	TotalData int `json:"totalData"`
+	TotalPage int `json:"totalPage"`
+	Page int `json:"page"`
+	PageSize int `json:"pageSize"`
+}
+
+
+
+
+	
+	
