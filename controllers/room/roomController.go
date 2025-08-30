@@ -284,10 +284,28 @@ func CreateRoom(c echo.Context) error {
 	if err := c.Bind(&newRoom); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Invalid input"})
 	}
+
+	// If picture points to temp, move it to uploads and update the picture URL
+	if newRoom.Picture != "" {
+		if strings.Contains(newRoom.Picture, "/temp/") {
+			fileName := filepath.Base(newRoom.Picture)
+			sourcePath := filepath.Join("./temp", fileName)
+			destPath := filepath.Join("./uploads", fileName)
+			sourcePath = filepath.ToSlash(sourcePath)
+			destPath = filepath.ToSlash(destPath)
+			fmt.Println("Source Path:", sourcePath)
+			fmt.Println("Destination Path:", destPath)
+			if err := moveFile(sourcePath, destPath); err != nil {
+				return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to move file: " + err.Error()})
+			}
+			newRoom.Picture = fmt.Sprintf("%s/uploads/%s", baseUrl, fileName)
+		}
+	}
+
 	query := "INSERT INTO room (name, type, picture, price_per_hour, capacity) VALUES ($1, $2, $3, $4, $5)"
 	_, err := db.Exec(query, newRoom.Name, newRoom.Type, newRoom.Picture, newRoom.PricePerHour, newRoom.Capacity)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, models.ErrorResponse{Message: "Failed to create room: " + err.Error()})
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Failed to create room: " + err.Error()})
 	}
 
 	return c.JSON(http.StatusCreated, models.SuccessResponseRoom{
@@ -307,9 +325,6 @@ func CreateRoom(c echo.Context) error {
 // @Param room body models.CreateRoom true "Room update object"
 // @Success 200 {object} models.SuccessResponseRoom
 // @Failure 400 {object} models.ErrorResponse
-// @Failure 401 {object} models.ErrorResponse
-// @Failure 500 {object} models.ErrorResponse
-// @Router /api/v1/rooms/{id} [put]
 func UpdateRoom(c echo.Context) error {
 	db := configDb.ConnectToDatabase()
 	defer db.Close()
@@ -367,8 +382,6 @@ func UpdateRoom(c echo.Context) error {
 	updateFields = append(updateFields, fmt.Sprintf("updated_at = CURRENT_TIMESTAMP"))
 
 	query := fmt.Sprintf("UPDATE room SET %s WHERE id=$%d", strings.Join(updateFields, ", "), paramCount)
-	configDb.ConnectToDatabase()
-	defer db.Close()
 	updateValues = append(updateValues, id)
 	_, err := db.Exec(query, updateValues...)
 	if err != nil {
