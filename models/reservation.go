@@ -42,6 +42,21 @@ type RoomCalculation struct {
 	Snack         SnackCategory `json:"snack"`
 }
 
+type RoomCalculationReservationHistory struct {
+    ID            int       `json:"id"`
+    Name          string    `json:"name"`
+    PricePerHour  float64   `json:"pricePerHour"`
+    ImageURL      string    `json:"imageURL"`
+    Capacity      int       `json:"capacity"`
+    Type          string    `json:"type"`
+    SubTotalSnack float64   `json:"subTotalSnack"`
+    SubTotalRoom  float64   `json:"subTotalRoom"`
+    Snack         SnackCategory `json:"snack"`
+    StartTime     time.Time `json:"start_time"`
+    EndTime       time.Time `json:"end_time"`
+    Duration      int       `json:"duration"`   
+    Participant   int       `json:"participant"`
+}
 type RoomCalculationReservation struct {
     Name          string    `json:"name"`
     PricePerHour  float64   `json:"pricePerHour"`
@@ -161,5 +176,39 @@ type DashboardData struct {
 type SuccessResponseDashboard struct {
 	Message string       `json:"message"`
 	Data    DashboardData `json:"data"`
+}
+
+
+
+type SuccessResponseHistory struct {
+	Message  string             `json:"message"`
+	Data     []PersonalReservationHistory `json:"data"`
+	Page     int                `json:"page"`
+	PageSize int                `json:"pageSize"`
+	TotalPage int               `json:"totalPage"`
+	TotalData int               `json:"totalData"`
+}
+
+
+type PersonalReservationHistory struct {
+    ID                  int           `json:"id"`
+    Name                string        `json:"name"`
+    PhoneNumber         string        `json:"phoneNumber"`
+    Company             string        `json:"company"`
+    TotalInvoice        float64       `json:"total"`
+    ReservationStatus   string        `json:"status"`
+    CreatedAt           time.Time     `json:"createdAt"`
+    UpdatedAt           time.Time     `json:"updatedAt"`
+    Rooms               []RoomDetail  `json:"rooms"`
+}
+type RoomDetail struct {
+	ID            int            `json:"id"`
+	Price         float64        `json:"price"`
+	Capacity      int            `json:"capacity"`
+	Name          string         `json:"name"`
+	Type          string         `json:"type"`
+	SubTotalRoom  float64        `json:"subTotalRoom"`
+	SubTotalSnack float64        `json:"subTotalSnack"`
+	Snack         SnackCategory  `json:"snack"`
 }
 

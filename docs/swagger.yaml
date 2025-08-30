@@ -72,6 +72,29 @@ definitions:
       startTime:
         type: string
     type: object
+  models.PersonalReservationHistory:
+    properties:
+      company:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      phoneNumber:
+        type: string
+      reservationStatus:
+        type: string
+      rooms:
+        items:
+          $ref: '#/definitions/models.RoomDetail'
+        type: array
+      totalInvoice:
+        type: number
+      updatedAt:
+        type: string
+    type: object
   models.ReservationCalculationData:
     properties:
       personalData:
@@ -190,6 +213,25 @@ definitions:
       percentageOfUsage:
         type: number
     type: object
+  models.RoomDetail:
+    properties:
+      capacity:
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+      price:
+        type: number
+      snack:
+        $ref: '#/definitions/models.SnackCategory'
+      subTotalRoom:
+        type: number
+      subTotalSnack:
+        type: number
+      type:
+        type: string
+    type: object
   models.RoomRequest:
     properties:
       endTime:
@@ -265,6 +307,23 @@ definitions:
         $ref: '#/definitions/models.DashboardData'
       message:
         type: string
+    type: object
+  models.SuccessResponseHistory:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.PersonalReservationHistory'
+        type: array
+      message:
+        type: string
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      totalData:
+        type: integer
+      totalPage:
+        type: integer
     type: object
   models.SuccessResponseLogin:
     properties:
@@ -613,6 +672,58 @@ paths:
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Endpoint for calculating reservation
+      tags:
+      - reservation
+  /api/v1/reservation/history:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve the reservation history within a specified date range
+        with pagination
+      parameters:
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        required: true
+        type: string
+      - description: Reservation type
+        in: query
+        name: type
+        type: string
+      - description: Reservation status
+        in: query
+        name: status
+        type: string
+      - description: Page number (default is 1)
+        in: query
+        name: page
+        type: integer
+      - description: Bearer <JWT Token>
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SuccessResponseHistory'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get reservation history
       tags:
       - reservation
   /api/v1/reservation/status/{id}:

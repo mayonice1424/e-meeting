@@ -10,6 +10,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/labstack/echo/v4"
 )
 
@@ -765,4 +766,266 @@ func GetDashboard(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, response)
+}
+
+
+
+// GetHistory godoc
+// @Summary Get reservation history
+// @Description Retrieve the reservation history within a specified date range with pagination
+// @Tags reservation
+// @Accept json
+// @Produce json
+// @Param start_date query string true "Start date (YYYY-MM-DD)"
+// @Param end_date query string true "End date (YYYY-MM-DD)"
+// @Param type query string false "Reservation type"
+// @Param status query string false "Reservation status"
+// @Param page query int false "Page number (default is 1)"
+// @Param Authorization header string true "Bearer <JWT Token>"
+// @Success 200 {object} models.SuccessResponseHistory
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /api/v1/reservation/history [get]
+func GetHistory(c echo.Context) error {
+    fmt.Println("Fetching reservation history")
+    claimsInterface := c.Get("userClaims")
+    if claimsInterface == nil {
+        return c.JSON(http.StatusUnauthorized, models.ErrorResponse{Message: "Unauthorized"})
+    }
+
+    claims, ok := claimsInterface.(jwt.MapClaims)
+    if !ok {
+        return c.JSON(http.StatusUnauthorized, models.ErrorResponse{Message: "Invalid claims"})
+    }
+    role := claims["role"].(string)
+    var userId string
+    if id, ok := claims["userId"].(float64); ok {
+        userId = fmt.Sprintf("%.0f", id) 
+    } else if id, ok := claims["userId"].(string); ok {
+        userId = id
+    } else {
+        return c.JSON(http.StatusUnauthorized, models.ErrorResponse{Message: "Invalid userId format"})
+    }
+
+    startDateStr := c.QueryParam("start_date")
+    endDateStr := c.QueryParam("end_date")
+    pageStr := c.QueryParam("page")
+    typeStr := c.QueryParam("type")
+    statusStr := c.QueryParam("status")
+    fmt.Println("Query Parameters - start_date:", startDateStr, "end_date:", endDateStr, "page:", pageStr, "type:", typeStr, "status:", statusStr)
+    layout := "2006-01-02"
+    var startDate time.Time
+    var endDate time.Time
+
+    if startDateStr == "" {
+        startDate = time.Now() 
+    } else {
+        var err error
+        startDate, err = time.Parse(layout, startDateStr)
+        if err != nil {
+            return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid startDate format"})
+        }
+    }
+
+    if endDateStr == "" {
+        endDate = time.Now() 
+    } else {
+        var err error
+        endDate, err = time.Parse(layout, endDateStr)
+        if err != nil {
+            return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid endDate format"})
+        }
+    }
+
+    startDateStrFormatted := startDate.Format("2006-01-02")
+    endDateStrFormatted := endDate.Format("2006-01-02")
+
+    page := 1
+    if pageStr != "" {
+        if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+            page = p
+        }
+    }
+    pageSize := 10
+    offset := (page - 1) * pageSize
+
+    db := configDb.ConnectToDatabase()
+    defer db.Close()
+
+    var totalData int
+    var query string
+    var rows *sql.Rows
+
+	if role == "Admin" {
+		countQuery := `
+			SELECT COUNT(dpr.id)
+			FROM data_booking_room dbr
+			JOIN data_personal_reservation dpr ON dbr.reservation_id = dpr.id
+			LEFT JOIN room r ON r.id = dbr.id_room
+			WHERE dbr.start_date::date >= $1 AND dbr.end_date::date <= $2
+		`
+
+		args := []interface{}{startDateStrFormatted, endDateStrFormatted}
+
+		if typeStr != "" {
+			args = append(args, typeStr)
+			countQuery += fmt.Sprintf(" AND r.type = $%d", len(args))
+		}
+
+		if statusStr != "" {
+			args = append(args, statusStr)
+			countQuery += fmt.Sprintf(" AND dpr.reservation_status = $%d", len(args))
+		}
+
+		err := db.QueryRow(countQuery, args...).Scan(&totalData)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error fetching total data"})
+		}
+
+		query = `
+			SELECT dpr.id, dpr.name, dpr.no_hp, dpr.company_name, dpr.total_invoice, dpr.reservation_status, dpr.recervation_create_date, dpr.reservation_update_date
+			FROM data_personal_reservation dpr
+			JOIN data_booking_room dbr ON dbr.reservation_id = dpr.id
+			LEFT JOIN room r ON r.id = dbr.id_room
+			WHERE dbr.start_date::date >= $1 AND dbr.end_date::date <= $2
+		`
+
+		args = []interface{}{startDateStrFormatted, endDateStrFormatted}
+
+		if typeStr != "" {
+			args = append(args, typeStr)
+			query += fmt.Sprintf(" AND r.type = $%d", len(args))
+		}
+
+		if statusStr != "" {
+			args = append(args, statusStr)
+			query += fmt.Sprintf(" AND dpr.reservation_status = $%d", len(args))
+		}
+
+		limitPos := len(args) + 1
+		offsetPos := len(args) + 2
+
+		query += fmt.Sprintf(`
+			ORDER BY dpr.recervation_create_date
+			LIMIT $%d OFFSET $%d
+		`, limitPos, offsetPos)
+
+		args = append(args, pageSize, offset)
+
+		rows, err = db.Query(query, args...)
+		if err != nil {
+			fmt.Println("Error fetching reservation data:", err)
+			return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error fetching reservation data"})
+		}
+	} else {
+        countQuery := `
+            SELECT COUNT(dpr.id)
+            FROM data_personal_reservation dpr
+            WHERE dbr.start_date::date >= $1 AND dbr.end_date::date <= $2 AND dpr.id_user = $3
+        `
+
+        var args []interface{}
+        args = append(args, startDateStrFormatted, endDateStrFormatted, userId)
+
+        if typeStr != "" {
+            countQuery += " AND dpr.type = $4"
+            args = append(args, typeStr)
+        }
+
+        if statusStr != "" {
+            countQuery += " AND dpr.reservation_status = $5"
+            args = append(args, statusStr)
+        }
+
+        err := db.QueryRow(countQuery, args...).Scan(&totalData)
+        if err != nil {
+            return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error fetching total data"})
+        }
+
+        query = `
+            SELECT dpr.id, dpr.name, dpr.no_hp, dpr.company_name, dpr.total_invoice, dpr.reservation_status, dpr.recervation_create_date, dpr.reservation_update_date
+            FROM data_personal_reservation dpr
+            JOIN data_booking_room dbr ON dbr.reservation_id = dpr.id
+            WHERE dbr.start_date::date >= $1 AND dbr.end_date::date <= $2 AND dpr.id_user = $3
+        `
+
+        if typeStr != "" {
+            query += " AND dpr.type = $4"
+        }
+
+        if statusStr != "" {
+            query += " AND dpr.reservation_status = $5"
+        }
+
+        query += `
+            ORDER BY dpr.recervation_create_date
+            LIMIT $6 OFFSET $7
+        `
+
+        args = append(args, pageSize, offset)
+
+        rows, err = db.Query(query, args...)
+        if err != nil {
+            return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error fetching reservation data"})
+        }
+    }
+
+    defer rows.Close()
+
+    var reservations []models.PersonalReservationHistory
+    for rows.Next() {
+        var reservation models.PersonalReservationHistory
+        err := rows.Scan(
+            &reservation.ID,
+            &reservation.Name,
+            &reservation.PhoneNumber,
+            &reservation.Company,
+            &reservation.TotalInvoice,
+            &reservation.ReservationStatus,
+            &reservation.CreatedAt,
+            &reservation.UpdatedAt,
+        )
+        if err != nil {
+            return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error scanning reservation"})
+        }
+
+        var rooms []models.RoomDetail
+        roomQuery := `
+            SELECT r.id, r.price_per_hour, r.name, r.type, r.capacity, dbr.sub_total_room_price, dbr.sub_total_snack_price, s.id AS snack_id, s.name AS snack_name, s.unit, s.price, s.category
+            FROM room r
+            JOIN data_booking_room dbr ON r.id = dbr.id_room
+            LEFT JOIN snack_category s ON s.id = dbr.snack_id
+            WHERE dbr.reservation_id = $1
+        `
+        roomRows, err := db.Query(roomQuery, reservation.ID)
+        if err != nil {
+						fmt.Println("Error fetching room data:", err)
+            return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error fetching room data"})
+        }
+        defer roomRows.Close()
+
+        for roomRows.Next() {
+            var room models.RoomDetail
+            var snack models.SnackCategory
+            err := roomRows.Scan(&room.ID, &room.Price, &room.Name, &room.Type, &room.Capacity, &room.SubTotalRoom, &room.SubTotalSnack, &snack.ID, &snack.Name, &snack.Unit, &snack.Price, &snack.Category)
+            if err != nil {
+                return c.JSON(http.StatusInternalServerError, models.ErrorResponse{Message: "Error scanning room and snack data"})
+            }
+            room.Snack = snack
+            rooms = append(rooms, room)
+        }
+        reservation.Rooms = rooms
+        reservations = append(reservations, reservation)
+    }
+
+    response := models.SuccessResponseHistory{
+        Message:  "Reservation history fetched successfully",
+        Data:     reservations,
+        Page:     page,
+        PageSize: pageSize,
+        TotalPage: (totalData + pageSize - 1) / pageSize,
+        TotalData: totalData,
+    }
+
+    return c.JSON(http.StatusOK, response)
 }
