@@ -268,15 +268,13 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Start date (YYYY-MM-DD)",
                         "name": "start_date",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "description": "End date (YYYY-MM-DD)",
                         "name": "end_date",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "type": "string",
