@@ -9,7 +9,7 @@ import (
 )
 
 // GetSnacks godoc
-// @Summary Endpoint for snack by id
+// @Summary Endpoint for getting snacks
 // @Description Snack
 // @Tags snacks
 // @Accept json
