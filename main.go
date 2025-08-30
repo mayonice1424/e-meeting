@@ -69,5 +69,5 @@ func main() {
 		log.Fatal("Error creating 'booking' table: ", err)
 	}
 	fmt.Println("Echo server is running..")
-	e.Logger.Fatal(e.Start(":8080"))
+	e.Logger.Fatal(e.Start(":" + configDb.ServerPort))
 }

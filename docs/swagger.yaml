@@ -72,6 +72,29 @@ definitions:
       startTime:
         type: string
     type: object
+  models.PersonalReservationHistory:
+    properties:
+      company:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      phoneNumber:
+        type: string
+      rooms:
+        items:
+          $ref: '#/definitions/models.RoomDetail'
+        type: array
+      status:
+        type: string
+      total:
+        type: number
+      updatedAt:
+        type: string
+    type: object
   models.ReservationCalculationData:
     properties:
       personalData:
@@ -94,46 +117,6 @@ definitions:
         type: array
       total:
         type: number
-    type: object
-  models.ReservationHistory:
-    properties:
-      company:
-        type: string
-      createdAt:
-        type: string
-      id:
-        type: integer
-      name:
-        type: string
-      phoneNumber:
-        type: number
-      rooms:
-        items:
-          $ref: '#/definitions/models.RoomHistory'
-        type: array
-      status:
-        type: string
-      total:
-        type: integer
-      updatedAt:
-        type: string
-    type: object
-  models.ReservationHistoryResponse:
-    properties:
-      data:
-        items:
-          $ref: '#/definitions/models.ReservationHistory'
-        type: array
-      message:
-        type: string
-      page:
-        type: integer
-      pageSize:
-        type: integer
-      totalData:
-        type: integer
-      totalPage:
-        type: integer
     type: object
   models.ReservationRequest:
     properties:
@@ -230,15 +213,18 @@ definitions:
       percentageOfUsage:
         type: number
     type: object
-  models.RoomHistory:
+  models.RoomDetail:
     properties:
+      capacity:
+        type: integer
       id:
         type: integer
       name:
         type: string
       price:
         type: number
-      snack: {}
+      snack:
+        $ref: '#/definitions/models.SnackCategory'
       subTotalRoom:
         type: number
       subTotalSnack:
@@ -321,6 +307,23 @@ definitions:
         $ref: '#/definitions/models.DashboardData'
       message:
         type: string
+    type: object
+  models.SuccessResponseHistory:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.PersonalReservationHistory'
+        type: array
+      message:
+        type: string
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      totalData:
+        type: integer
+      totalPage:
+        type: integer
     type: object
   models.SuccessResponseLogin:
     properties:
@@ -671,6 +674,58 @@ paths:
       summary: Endpoint for calculating reservation
       tags:
       - reservation
+  /api/v1/reservation/history:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve the reservation history within a specified date range
+        with pagination
+      parameters:
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        required: true
+        type: string
+      - description: Reservation type
+        in: query
+        name: type
+        type: string
+      - description: Reservation status
+        in: query
+        name: status
+        type: string
+      - description: Page number (default is 1)
+        in: query
+        name: page
+        type: integer
+      - description: Bearer <JWT Token>
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SuccessResponseHistory'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get reservation history
+      tags:
+      - reservation
   /api/v1/reservation/status/{id}:
     put:
       consumes:
@@ -713,51 +768,6 @@ paths:
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Update reservation status
-      tags:
-      - reservation
-  /api/v1/reservations/history:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve reservation history with filtering and pagination
-      parameters:
-      - description: Start date (YYYY-MM-DD)
-        in: query
-        name: startDate
-        type: string
-      - description: End date (YYYY-MM-DD)
-        in: query
-        name: endDate
-        type: string
-      - description: Room type (vip, suite)
-        in: query
-        name: roomType
-        type: string
-      - description: Reservation status
-        in: query
-        name: status
-        type: string
-      - description: Bearer <JWT Token>
-        in: header
-        name: Authorization
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.ReservationHistoryResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/models.ErrorResponse'
-      summary: Get reservation history
       tags:
       - reservation
   /api/v1/reservations/schedules:

@@ -15,6 +15,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/gomail.v2"
 )
+var baseUrl string
 var emailUser string 
 var emailPassword string 
 func init() {
@@ -24,6 +25,10 @@ func init() {
     }
 		emailUser  = string(os.Getenv("EMAIL_USER"))
 		emailPassword = string(os.Getenv("EMAIL_PASSWORD"))
+		baseUrl = os.Getenv("BASE_URL")
+		if baseUrl == "" {
+			log.Fatal("BASE_URL is not set in the environment")
+		}
 }
 func GenerateRandomString(length int) (string, error) {
 	bytes := make([]byte, length)
@@ -79,7 +84,7 @@ func getUserIDByEmail(email string) (int, error) {
 }
 
 func SendResetEmail(userEmail, token string) error {
-	resetLink := fmt.Sprintf("https://localhost:8080/reset-password?token=%s", token)
+	resetLink := fmt.Sprintf("%s/reset-password?token=%s", baseUrl, token)
 	emailContent := fmt.Sprintf("Klik link ini untuk mereset password Anda: %s", resetLink)
 	emailUser := os.Getenv("EMAIL_USER")
   emailPassword := os.Getenv("EMAIL_PASSWORD")

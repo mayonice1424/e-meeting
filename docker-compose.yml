@@ -21,7 +21,7 @@ services:
     restart: unless-stopped
     command: go run main.go
     ports:
-      - "8080:800"
+      - "8080:8080"
     depends_on:
       - database
     networks:

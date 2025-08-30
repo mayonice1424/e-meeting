@@ -42,6 +42,21 @@ type RoomCalculation struct {
 	Snack         SnackCategory `json:"snack"`
 }
 
+type RoomCalculationReservationHistory struct {
+    ID            int       `json:"id"`
+    Name          string    `json:"name"`
+    PricePerHour  float64   `json:"pricePerHour"`
+    ImageURL      string    `json:"imageURL"`
+    Capacity      int       `json:"capacity"`
+    Type          string    `json:"type"`
+    SubTotalSnack float64   `json:"subTotalSnack"`
+    SubTotalRoom  float64   `json:"subTotalRoom"`
+    Snack         SnackCategory `json:"snack"`
+    StartTime     time.Time `json:"start_time"`
+    EndTime       time.Time `json:"end_time"`
+    Duration      int       `json:"duration"`   
+    Participant   int       `json:"participant"`
+}
 type RoomCalculationReservation struct {
     Name          string    `json:"name"`
     PricePerHour  float64   `json:"pricePerHour"`
@@ -163,40 +178,37 @@ type SuccessResponseDashboard struct {
 	Data    DashboardData `json:"data"`
 }
 
-type RoomHistory struct {
-	ID          int       `json:"id"`
-	Price       float64   `json:"price"`
-	Name        string    `json:"name"`
-	Type        string    `json:"type"`
-	SubTotalRoom  float64   `json:"subTotalRoom"`
-	SubTotalSnack float64   `json:"subTotalSnack"`
-	Snack       interface{}  `json:"snack"` 
-}
 
-// Reservation merepresentasikan data reservasi
-type ReservationHistory struct {
-	ID          int       `json:"id"`
-	Name        string    `json:"name"`
-	PhoneNumber float64   `json:"phoneNumber"`
-	Company     string    `json:"company"`
-	Total       int       `json:"total"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
-	Rooms       []RoomHistory `json:"rooms"`
-}
 
-type ReservationHistoryResponse struct {
-	Message string `json:"message"`
-	Data    []ReservationHistory `json:"data"`
-	TotalData int `json:"totalData"`
-	TotalPage int `json:"totalPage"`
-	Page int `json:"page"`
-	PageSize int `json:"pageSize"`
+type SuccessResponseHistory struct {
+	Message  string             `json:"message"`
+	Data     []PersonalReservationHistory `json:"data"`
+	Page     int                `json:"page"`
+	PageSize int                `json:"pageSize"`
+	TotalPage int               `json:"totalPage"`
+	TotalData int               `json:"totalData"`
 }
 
 
+type PersonalReservationHistory struct {
+    ID                  int           `json:"id"`
+    Name                string        `json:"name"`
+    PhoneNumber         string        `json:"phoneNumber"`
+    Company             string        `json:"company"`
+    TotalInvoice        float64       `json:"total"`
+    ReservationStatus   string        `json:"status"`
+    CreatedAt           time.Time     `json:"createdAt"`
+    UpdatedAt           time.Time     `json:"updatedAt"`
+    Rooms               []RoomDetail  `json:"rooms"`
+}
+type RoomDetail struct {
+	ID            int            `json:"id"`
+	Price         float64        `json:"price"`
+	Capacity      int            `json:"capacity"`
+	Name          string         `json:"name"`
+	Type          string         `json:"type"`
+	SubTotalRoom  float64        `json:"subTotalRoom"`
+	SubTotalSnack float64        `json:"subTotalSnack"`
+	Snack         SnackCategory  `json:"snack"`
+}
 
-
-	
-	

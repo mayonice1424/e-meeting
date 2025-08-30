@@ -17,6 +17,5 @@ func ReservationRoutes(e *echo.Echo) {
 	group.GET("/reservations/schedules", reservationController.GetReservationSchedule)
 	group.GET("/rooms/:id/reservation", reservationController.GetRoomsReservationSchedule)
 	group.GET("/dashboard", reservationController.GetDashboard, auth.AuthAdminRoleMiddleware)
-	group.GET("/reservations/history", reservationController.GetReservationHistory)
-	// group.POST("/reservations", reservationController.)
+	group.GET("/reservation/history", reservationController.GetHistory, auth.AuthMiddleware)
 }
