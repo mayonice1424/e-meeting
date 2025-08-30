@@ -82,7 +82,7 @@ func UserRegister(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Invalid request payload"})
 	}
 	if !PasswordValidation(newUser.Password) {
-		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Password must contain at least one lowercase letter, one uppercase letter, one digit, and one special character"})
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Password must contain at least 8 Characters, one lowercase letter, one uppercase letter, one digit, and one special character"})
 	}
 	if newUser.Password != newUser.Confirm_Password {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{Message: "Password and Confirm Password do not match"})
