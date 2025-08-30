@@ -43,7 +43,7 @@ func ReservationCalculation(c echo.Context) error {
 	}
 	snackID, err := strconv.Atoi(c.QueryParam("snack_id"))
 	if err != nil {
-		snackID = 0 // If no snack is provided, set to 0 (no snack)
+		snackID = 0 
 	}
 	startTime := c.QueryParam("startTime")
 	endTime := c.QueryParam("endTime")
@@ -77,8 +77,8 @@ func ReservationCalculation(c echo.Context) error {
 	defer db.Close()
 
 	var room models.RoomById
-	queryRoom := "SELECT id, name, price_per_hour, capacity, picture FROM room WHERE id = $1"
-	err = db.QueryRow(queryRoom, roomID).Scan(&room.ID, &room.Name, &room.PricePerHour, &room.Capacity, &room.Picture)
+	queryRoom := "SELECT id,type, name, price_per_hour, capacity, picture FROM room WHERE id = $1"
+	err = db.QueryRow(queryRoom, roomID).Scan(&room.ID, &room.Type, &room.Name, &room.PricePerHour, &room.Capacity, &room.Picture)
 	if err != nil {
 		return c.JSON(http.StatusNotFound, models.ErrorResponse{Message: "Room not found"})
 	}
