@@ -268,15 +268,13 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Start date (YYYY-MM-DD)",
                         "name": "start_date",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "description": "End date (YYYY-MM-DD)",
                         "name": "end_date",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "type": "string",
@@ -1383,16 +1381,16 @@ const docTemplate = `{
                 "phoneNumber": {
                     "type": "string"
                 },
-                "reservationStatus": {
-                    "type": "string"
-                },
                 "rooms": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/models.RoomDetail"
                     }
                 },
-                "totalInvoice": {
+                "status": {
+                    "type": "string"
+                },
+                "total": {
                     "type": "number"
                 },
                 "updatedAt": {
