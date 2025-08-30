@@ -5,9 +5,9 @@ import (
 	configDb "emeeting/config"
 	"emeeting/models"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
-	"math"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -430,16 +430,15 @@ func GetReservationSchedule(c echo.Context) error {
 	}
 
 	response := models.SuccessResponseReservationSchedule{
-		Message:   "Reservation schedule fetched successfully",
+		Message:      "Reservation schedule fetched successfully",
 		Reservations: schedules,
-		Page:      page,
-		PageSize:  pageSize,
-		TotalPage: (totalData + pageSize - 1) / pageSize,
-		TotalData: totalData,
+		Page:         page,
+		PageSize:     pageSize,
+		TotalPage:    (totalData + pageSize - 1) / pageSize,
+		TotalData:    totalData,
 	}
 	return c.JSON(http.StatusOK, response)
 }
-
 
 // GetRoomsReservationSchedule godoc
 // @Summary Get room reservation schedule
@@ -635,7 +634,6 @@ func GetReservationById(c echo.Context) error {
 	return c.JSON(http.StatusOK, response)
 }
 
-
 // GetDashboard godoc
 // @Summary Get dashboard data for reservations
 // @Description Retrieve dashboard data including total rooms, total visitors, total reservations, and total omzet within a specified date range.
@@ -749,7 +747,7 @@ func GetDashboard(c echo.Context) error {
 		}
 
 		room.Omzet = omzet
-		room.PercentageOfUsage = math.Round((omzet / totalOmzet) * 100 * 100) / 100
+		room.PercentageOfUsage = math.Round((omzet/totalOmzet)*100*100) / 100
 
 		rooms = append(rooms, room)
 	}
@@ -757,14 +755,13 @@ func GetDashboard(c echo.Context) error {
 	response := models.SuccessResponseDashboard{
 		Message: "Get dashboard data success",
 		Data: models.DashboardData{
-			TotalRoom:      totalRooms,
-			TotalVisitor:   totalVisitors,
+			TotalRoom:        totalRooms,
+			TotalVisitor:     totalVisitors,
 			TotalReservation: totalReservations,
-			TotalOmzet:      totalOmzet,
-			Rooms:           rooms,
+			TotalOmzet:       totalOmzet,
+			Rooms:            rooms,
 		},
 	}
-
 	return c.JSON(http.StatusOK, response)
 }
 
